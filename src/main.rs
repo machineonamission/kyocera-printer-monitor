@@ -1,9 +1,9 @@
 mod js;
+mod http;
+mod check_one_printer;
+
 
 fn main() {
     let mut runtime = js::init();
-    js::run_script(
-        &mut runtime,
-        concat!(include_str!("js_hijack_before.js"), include_str!("../demo.js"), include_str!("js_hijack_after.js")).to_string(),
-    );
+    check_one_printer::check_printer("165.134.155.129", &mut runtime).unwrap();
 }

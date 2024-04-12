@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.82"
 deno_core = "0.273.0"
+serde_json = "1.0.115"
+ureq = "2.9.6"

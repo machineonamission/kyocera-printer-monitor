@@ -1,6 +1,8 @@
+use std::sync::Arc;
 use deno_core::{anyhow, JsRuntime, RuntimeOptions};
 use serde_json::Value;
 use anyhow::Result;
+use tokio::sync::Mutex;
 
 pub fn init() -> JsRuntime {
     // init js runtime
@@ -18,4 +20,10 @@ pub fn cursed_js_to_object(runtime: &mut JsRuntime, script: String) -> Result<Va
     let obj = rtn.to_rust_string_lossy(&mut handle);
     let val: Value = serde_json::from_str(&obj)?;
     Ok(val)
+}
+
+pub async fn CJTO_locking(runtime: Arc<Mutex<JsRuntime>>, script: String) -> Result<Value> {
+    // grabs the lock, runs the function, and then releases the lock
+    let mut runtime = runtime.lock().await;
+    cursed_js_to_object(&mut runtime, script)
 }

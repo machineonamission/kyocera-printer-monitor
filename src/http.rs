@@ -2,6 +2,8 @@ use crate::js;
 use anyhow::Result;
 use deno_core::JsRuntime;
 use serde_json::Value;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub async fn fetch(host:&str, path:&str) -> Result<String> {
     Ok(reqwest::Client::builder()
@@ -17,8 +19,8 @@ pub async fn fetch(host:&str, path:&str) -> Result<String> {
         .await?)
 }
 
-pub async fn fetch_object(host: &str, path:&str, runtime: &mut JsRuntime) -> Result<Value> {
+pub async fn fetch_object(host: &str, path:&str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Value> {
     let script = fetch(host, path).await?;
-    let obj = js::cursed_js_to_object(runtime, script)?;
+    let obj = js::CJTO_locking(runtime, script).await?;
     Ok(obj)
 }

@@ -1,28 +1,32 @@
 use std::sync::Arc;
 use deno_core::{anyhow, JsRuntime, RuntimeOptions};
-use serde_json::Value;
-use anyhow::Result;
+use serde_json::{Map, Value};
+use anyhow::{anyhow, Result};
 use tokio::sync::Mutex;
+pub(crate) type Object = Map<String, Value>;
 
 pub fn init() -> JsRuntime {
     // init js runtime
     JsRuntime::new(RuntimeOptions::default())
 }
 
-pub fn cursed_js_to_object(runtime: &mut JsRuntime, script: String) -> Result<Value> {
+pub fn cursed_js_to_object(runtime: &mut JsRuntime, script: String) -> Result<Object> {
     let res = runtime
         .execute_script(
             "<demo>",
-            format!("{}{}{}", include_str!("js_hijack_before.js"), script, include_str!("js_hijack_after.js"))
+            format!("{}\n{}\n{}", include_str!("js_hijack_before.js"), script, include_str!("js_hijack_after.js"))
         )?;
     let mut handle = runtime.handle_scope();
     let rtn = res.open(&mut handle);
     let obj = rtn.to_rust_string_lossy(&mut handle);
     let val: Value = serde_json::from_str(&obj)?;
-    Ok(val)
+    match val {
+        Value::Object(map) => Ok(map),
+        e => Err(anyhow!("JS did not return an object, but instead: {e:?}"))
+    }
 }
 
-pub async fn CJTO_locking(runtime: Arc<Mutex<JsRuntime>>, script: String) -> Result<Value> {
+pub async fn CJTO_locking(runtime: Arc<Mutex<JsRuntime>>, script: String) -> Result<Object> {
     // grabs the lock, runs the function, and then releases the lock
     let mut runtime = runtime.lock().await;
     cursed_js_to_object(&mut runtime, script)

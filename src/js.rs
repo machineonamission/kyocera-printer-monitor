@@ -20,10 +20,11 @@ pub fn cursed_js_to_object(runtime: &mut JsRuntime, script: String) -> Result<Ob
     let rtn = res.open(&mut handle);
     let obj = rtn.to_rust_string_lossy(&mut handle);
     let val: Value = serde_json::from_str(&obj)?;
-    match val {
-        Value::Object(map) => Ok(map),
-        e => Err(anyhow!("JS did not return an object, but instead: {e:?}"))
-    }
+    if let Value::Object(map) = val {
+        Ok(map)
+    } else {
+        Err(anyhow!("JS did not return an object, but instead: {val:?}"))
+    } 
 }
 
 pub async fn CJTO_locking(runtime: Arc<Mutex<JsRuntime>>, script: String) -> Result<Object> {

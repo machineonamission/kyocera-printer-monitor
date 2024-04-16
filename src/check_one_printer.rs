@@ -15,30 +15,6 @@ pub enum Status {
     Error(String),
 }
 
-// ripped this from the cursed printer js, hopefully wont change...
-static STATUSES: [&str; 16] = [
-    "Printing...",
-    "Scanning...",
-    "Ready.",
-    "Toner Low...", // error
-    "OK",
-    "Connected phone in use.",
-    "Dialing...",
-    "Receiving...",
-    "Sending...",
-    "Error has occurred.", // error
-    "Preparing...",
-    "Sleeping...",
-    "Cannot recognize.", // error
-    "Adjusting...",
-    "Phone is off the hook.",
-    "Suspending..."
-];
-static ERRORS: [usize; 3] = [
-    // map to the 3 errors above ^, also ripped from printer js
-    3, 9, 12
-];
-
 impl Add<Status> for Status {
     type Output = Status;
     fn add(self, other: Status) -> Status {
@@ -82,22 +58,28 @@ impl Display for Status {
     }
 }
 
+fn unwrap_json_string(val: &Value, name: impl Display) -> Result<&String> {
+    // pulls String out of Value
+    // name is just for debugging/tracing, not strictly necessary for functionality
+    if let Value::String(s) = val {
+        Ok(s)
+    } else {
+        Err(anyhow::anyhow!("{name} is not a string, but instead: {val:?}"))
+    }
+}
+
+
+
 
 async fn check_staples(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_StplPnch.model.htm", runtime).await?;
     let mut status = Status::Ready;
     for (key, val) in obj.iter() {
-        match val {
-            Value::String(s) => {
-                match s.as_str() {
-                    "Enable" | "Nothing" => { /*status += Status::Ready // redundant add */ } // no stapler is still ready i think
-                    _ => { status += Status::Error(format!("Stapler error for {key}: {s}")) }
-                }
-            }
-            // invalid statuses
-            Value::Null => { return Err(anyhow::anyhow!("Stapler status key {key} is null.")); } //
-            e => return Err(anyhow::anyhow!("Stapler status key {key} is not a string, but instead: {e:?}"))
-        };
+        let s = unwrap_json_string(val, format!("Stapler status key {key}"))?;
+        match s.as_str() {
+            "Enable" | "Nothing" => { /*status += Status::Ready // redundant add */ } // no stapler is still ready i think
+            _ => { status += Status::Error(format!("Stapler error for {key}: {s}")) }
+        }
     }
     Ok(status)
 }
@@ -120,27 +102,49 @@ async fn check_toner(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
             status += Status::Error(format!("{color_name} Toner is at {toner_level}%"));
         }
     }
-    match &obj["wasteToner"] {
-        Value::String(s) => {
-            match s.as_str() {
-                "2" => { /*status += Status::Ready // redundant add */ }
-                // TODO: there is probably a different key for "no waste toner installed"
-                _ => { status += Status::Error(format!("Waste Toner status is not ready but: {s}")) }
-            }
-        }
-        // invalid statuses
-        Value::Null => { return Err(anyhow::anyhow!("Waste Toner status key is null.")); }
-        e => return Err(anyhow::anyhow!("Waste Toner status key is not a string, but instead: {e:?}"))
+    let s = unwrap_json_string(&obj["wasteToner"], "wasteToner key")?;
+    static WASTE_TONER_STATUSES: [&str; 4] = [
+        "Warning",
+        "Full",
+        "OK", // seems to be only "Ready" value?
+        "Removed"
+    ];
+    match s.parse::<usize>()? {
+        2 => { /*status += Status::Ready // redundant add */ }
+        i @ (0 | 1 | 3) => { status += Status::Error(format!("Waste Toner status is {}", WASTE_TONER_STATUSES[i])) }
+        _ => { status += Status::Error(format!("Waste Toner status is: {s}")) }
     }
     Ok(status)
 }
-
+// ripped this from the cursed printer js, hopefully wont change...
+static STATUSES: [&str; 16] = [
+    "Printing...",
+    "Scanning...",
+    "Ready.",
+    "Toner Low...", // error
+    "OK",
+    "Connected phone in use.",
+    "Dialing...",
+    "Receiving...",
+    "Sending...",
+    "Error has occurred.", // error
+    "Preparing...",
+    "Sleeping...",
+    "Cannot recognize.", // error
+    "Adjusting...",
+    "Phone is off the hook.",
+    "Suspending..."
+];
+static ERRORS: [usize; 3] = [
+    // map to the 3 errors above ^, also ripped from printer js
+    3, 9, 12
+];
 async fn check_status(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_DvcSts.model.htm", runtime).await?;
+    let mut status = Status::Ready;
     // TODO
-    dbg!(&obj);
-
-    Ok(Status::Ready)
+    let pds = unwrap_json_string(&obj["PrinterDeviceStatus"], "PrinterDeviceStatus key")?;
+    Ok(status)
 }
 
 async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {

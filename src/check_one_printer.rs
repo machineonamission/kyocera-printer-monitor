@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::iter::Map;
 use std::ops::{Add, AddAssign};
 use deno_core::JsRuntime;
 use crate::http::fetch_object;
@@ -13,6 +14,30 @@ pub enum Status {
     Ready,
     Error(String),
 }
+
+// ripped this from the cursed printer js, hopefully wont change...
+static STATUSES: [&str; 16] = [
+    "Printing...",
+    "Scanning...",
+    "Ready.",
+    "Toner Low...", // error
+    "OK",
+    "Connected phone in use.",
+    "Dialing...",
+    "Receiving...",
+    "Sending...",
+    "Error has occurred.", // error
+    "Preparing...",
+    "Sleeping...",
+    "Cannot recognize.", // error
+    "Adjusting...",
+    "Phone is off the hook.",
+    "Suspending..."
+];
+static ERRORS: [usize; 3] = [
+    // map to the 3 errors above ^, also ripped from printer js
+    3, 9, 12
+];
 
 impl Add<Status> for Status {
     type Output = Status;
@@ -80,13 +105,12 @@ async fn check_staples(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Sta
 async fn check_toner(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_Toner.model.htm", runtime).await?;
     let mut status = Status::Ready;
-    dbg!(&obj);
     static TONER_KEYS: [&str; 4] = ["Black", "Cyan", "Magenta", "Yellow"];
     let Value::Array(toner_arr) = &obj["Renaming"] else { return Err(anyhow::anyhow!("Toner object does not have a Renaming key.")); };
     // the printer has a "ColorOrMono" key but i'd rather just enumerate the array directly
     for (i, color) in toner_arr.iter().enumerate() {
         let Value::Number(toner_level) = color else { return Err(anyhow::anyhow!("Toner 'Renaming' key {i} is not a number.")); };
-        const THRESHOLD:f64 = 15f64;
+        const THRESHOLD: f64 = 15f64;
         let Some(level) = toner_level.as_f64() else { return Err(anyhow::anyhow!("Toner level {toner_level} is not a valid f64.")); };
         if level < THRESHOLD { // the actual core logic wrapped by all this error handling
             let color_name = match TONER_KEYS.get(i) {
@@ -114,6 +138,8 @@ async fn check_toner(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
 async fn check_status(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_DvcSts.model.htm", runtime).await?;
     // TODO
+    dbg!(&obj);
+
     Ok(Status::Ready)
 }
 

@@ -142,14 +142,32 @@ static ERRORS: [usize; 3] = [
 async fn check_status(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_DvcSts.model.htm", runtime).await?;
     let mut status = Status::Ready;
-    // TODO
+
     let pds = unwrap_json_string(&obj["PrinterDeviceStatus"], "PrinterDeviceStatus key")?;
+    let pdsint = pds.parse::<usize>()?;
+    if ERRORS.contains(&pdsint) {
+        status += Status::Error(format!("Printer status is {}", STATUSES[pdsint]));
+    }
+    
+    let sds = unwrap_json_string(&obj["ScannerDeviceStatus"], "ScannerDeviceStatus key")?;
+    let sdsint = sds.parse::<usize>()?;
+    if ERRORS.contains(&sdsint) {
+        status += Status::Error(format!("Scanner status is {}", STATUSES[sdsint]));
+    }
+
+    let pm = unwrap_json_string(&obj["PanelMessage"], "PanelMessage key")?;
+    if pm != "Ready." {
+        status += Status::Error(format!("Panel message is: {pm}"));
+    }
+    
     Ok(status)
 }
 
 async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_Paper.model.htm", runtime).await?;
     // TODO
+    dbg!(&obj);
+    
     Ok(Status::Ready)
 }
 

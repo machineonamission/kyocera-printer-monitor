@@ -14,16 +14,16 @@ pub enum Status {
     Error(String),
 }
 
-impl std::ops::Add<Status> for Status {
+impl Add<Status> for Status {
     type Output = Status;
     fn add(self, other: Status) -> Status {
         // combine two errors
         match (&self, &other) {
             // ready + ready = ready
-            (Self::Ready, Self::Ready) => self,
+            (Self::Ready, Self::Ready) | // self
             // ready + error = error + ready = error
-            (Self::Ready, Self::Error(_)) => other,
             (Self::Error(_), Self::Ready) => self,
+            (Self::Ready, Self::Error(_)) => other,
             // error + error = combined errors
             (Self::Error(err_lhs), Self::Error(err_rhs)) => Self::Error(format!("{}\n{}", err_lhs, err_rhs)),
         }
@@ -34,10 +34,10 @@ impl AddAssign for Status {
     fn add_assign(&mut self, rhs: Self) {
         match (&self, &rhs) {
             // ready + ready = ready
-            (Self::Ready, Self::Ready) => { /* *self = self is redundant */ }
+            (Self::Ready, Self::Ready) | // self
             // ready + error = error + ready = error
+            (Self::Error(_), Self::Ready) => { /* *self = self is redundant and also doesn't work */ }
             (Self::Ready, Self::Error(_)) => { *self = rhs; }
-            (Self::Error(_), Self::Ready) => { /* *self = self is redundant */ }
             // error + error = combined errors
             (Self::Error(err_lhs), Self::Error(err_rhs)) => { *self = Self::Error(format!("{}\n{}", err_lhs, err_rhs)) }
         }
@@ -83,17 +83,30 @@ async fn check_toner(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
     dbg!(&obj);
     static TONER_KEYS: [&str; 4] = ["Black", "Cyan", "Magenta", "Yellow"];
     let Value::Array(toner_arr) = &obj["Renaming"] else { return Err(anyhow::anyhow!("Toner object does not have a Renaming key.")); };
+    // the printer has a "ColorOrMono" key but i'd rather just enumerate the array directly
     for (i, color) in toner_arr.iter().enumerate() {
         let Value::Number(toner_level) = color else { return Err(anyhow::anyhow!("Toner 'Renaming' key {i} is not a number.")); };
         const THRESHOLD:f64 = 15f64;
         let Some(level) = toner_level.as_f64() else { return Err(anyhow::anyhow!("Toner level {toner_level} is not a valid f64.")); };
-        if level < THRESHOLD {
+        if level < THRESHOLD { // the actual core logic wrapped by all this error handling
             let color_name = match TONER_KEYS.get(i) {
                 Some(color) => color.to_string(),
                 None => format!("Unknown color {i}")
             };
             status += Status::Error(format!("{color_name} Toner is at {toner_level}%"));
         }
+    }
+    match &obj["wasteToner"] {
+        Value::String(s) => {
+            match s.as_str() {
+                "2" => { /*status += Status::Ready // redundant add */ }
+                // TODO: there is probably a different key for "no waste toner installed"
+                _ => { status += Status::Error(format!("Waste Toner status is not ready but: {s}")) }
+            }
+        }
+        // invalid statuses
+        Value::Null => { return Err(anyhow::anyhow!("Waste Toner status key is null.")); }
+        e => return Err(anyhow::anyhow!("Waste Toner status key is not a string, but instead: {e:?}"))
     }
     Ok(status)
 }

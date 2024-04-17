@@ -192,16 +192,16 @@ async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_Paper.model.htm", runtime).await?;
     let mut status = Status::Ready;
 
+    // im not 100% sure if this is the right way to count cassettes, but it seems to work?
+
     // i think we can always assume a printer has a MP tray,
     // and we have to since not all printers have a value saying if they have one
-
-    // the count var includes the MP tray, so subtract it
     let mut cassette_count =
         unwrap_json_number(&obj["getCassetCount"], "getCassetCount key")? as usize;
+    // if the key does exist, regardless of if its 0 or 1, mptray is not included in the count and we bing chilling
     if let None = obj.get("mpTrayStatus") {
         cassette_count -= 1usize // if this key doesn't exist, mptray is included in the count, subtract
     }
-    // if the key does exist, regardless of if its 0 or 1, mptray is not included in the count and we bing chilling
 
     // getPaperStatus returns if the printer can detect the exactish paper count vs just empty/full,
     // i dont think we need it cause getCassetLevel is just fixed at 100 or level_empty which is fine
@@ -321,12 +321,13 @@ pub async fn format_check_printer(
                         false,
                     )
                 } else {
+                    // None instead of "" so we don't print a blank line when calling println
                     (None, false)
                 }
             }
             Status::Error(error, count) => (
                 Some(format!(
-                    "{} ({}) has {count} error{}:\n    {}",
+                    "{} ({}) has {count} error{}:\n    - {}",
                     printer.ip,
                     printer.device_info,
                     if count == 1 { "" } else { "s" },
@@ -335,6 +336,8 @@ pub async fn format_check_printer(
                 true,
             ),
         },
+        // intentionally not doing e:? because the stack trace is massive
+        // easier to handle this here than matching later
         Err(e) => (Some(format!("Error checking {ip}: {e}")), true),
     }
 }

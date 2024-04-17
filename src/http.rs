@@ -1,10 +1,12 @@
-use crate::js;
+use std::sync::Arc;
+
 use anyhow::Result;
 use deno_core::JsRuntime;
-use std::sync::Arc;
 use tokio::sync::Mutex;
 
-pub async fn fetch(host:&str, path:&str) -> Result<String> {
+use crate::js;
+
+pub async fn fetch(host: &str, path: &str) -> Result<String> {
     Ok(reqwest::Client::builder()
         // printer forces https but doesn't have a valid cert so fuck you
         .danger_accept_invalid_certs(true)
@@ -19,7 +21,11 @@ pub async fn fetch(host:&str, path:&str) -> Result<String> {
         .await?)
 }
 
-pub async fn fetch_object(host: &str, path:&str, runtime: Arc<Mutex<JsRuntime>>) -> Result<js::Object> {
+pub async fn fetch_object(
+    host: &str,
+    path: &str,
+    runtime: Arc<Mutex<JsRuntime>>,
+) -> Result<js::Object> {
     let script = fetch(host, path).await?;
     let obj = js::CJTO_locking(runtime, script).await?;
     Ok(obj)

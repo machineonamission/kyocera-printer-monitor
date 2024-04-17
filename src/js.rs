@@ -1,8 +1,10 @@
 use std::sync::Arc;
-use deno_core::{anyhow, JsRuntime, RuntimeOptions};
-use serde_json::{Map, Value};
+
 use anyhow::{anyhow, Result};
+use deno_core::{JsRuntime, RuntimeOptions};
+use serde_json::{Map, Value};
 use tokio::sync::Mutex;
+
 pub(crate) type Object = Map<String, Value>;
 
 pub fn init() -> JsRuntime {
@@ -11,11 +13,15 @@ pub fn init() -> JsRuntime {
 }
 
 pub fn cursed_js_to_object(runtime: &mut JsRuntime, script: String) -> Result<Object> {
-    let res = runtime
-        .execute_script(
-            "<demo>",
-            format!("{}\n{}\n{}", include_str!("js_hijack_before.js"), script, include_str!("js_hijack_after.js"))
-        )?;
+    let res = runtime.execute_script(
+        "<demo>",
+        format!(
+            "{}\n{}\n{}",
+            include_str!("js_hijack_before.js"),
+            script,
+            include_str!("js_hijack_after.js")
+        ),
+    )?;
     let mut handle = runtime.handle_scope();
     let rtn = res.open(&mut handle);
     let obj = rtn.to_rust_string_lossy(&mut handle);
@@ -24,7 +30,7 @@ pub fn cursed_js_to_object(runtime: &mut JsRuntime, script: String) -> Result<Ob
         Ok(map)
     } else {
         Err(anyhow!("JS did not return an object, but instead: {val:?}"))
-    } 
+    }
 }
 
 pub async fn CJTO_locking(runtime: Arc<Mutex<JsRuntime>>, script: String) -> Result<Object> {

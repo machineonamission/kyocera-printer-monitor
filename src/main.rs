@@ -44,7 +44,7 @@ async fn main() {
     }
     // get IPs
     println!(
-        "Enter in the IPs of the printers, separated by newlines. Press enter when you are done."
+        "Enter in the IPs of the printers, separated by newlines. Press enter twice when you are done."
     );
     let mut ips = Vec::new();
     loop {
@@ -89,16 +89,24 @@ async fn main() {
             // progress bar for fun
             let bar = indicatif::ProgressBar::new(len as u64);
             bar.inc(0); // get it to display
-                        // get each result as it comes in
+
+            // get each result as it comes in
             while let Some(result) = joinset.join_next().await {
                 bar.inc(1);
-                let res = result.unwrap();
-                if res.1 {
-                    errors += 1;
-                }
-                if let Some(printmsg) = res.0 {
-                    bar.println(printmsg);
-                }
+                match result {
+                    Ok(res) => {
+                        if res.1 {
+                            errors += 1;
+                        }
+                        if let Some(printmsg) = res.0 {
+                            bar.println(printmsg);
+                        }
+                    }
+                    Err(e) => {
+                        bar.println("JoinError occured.");
+                        bar.println(e.to_string());
+                    }
+                };
             }
             bar.finish_and_clear();
             println!(
@@ -107,4 +115,8 @@ async fn main() {
             );
         })
         .await;
+    println!("Press enter to exit program.");
+    let mut s = String::new();
+    sin.read_line(&mut s)
+        .expect("Did not enter a correct string");
 }

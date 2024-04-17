@@ -14,7 +14,10 @@ use crate::r#static::*;
 #[derive(Debug)]
 pub enum Status {
     Ready,
-    Error(String),
+    Error(
+        String, // error message(s)
+        usize,  // number of errors
+    ),
 }
 
 impl Add<Status> for Status {
@@ -25,10 +28,10 @@ impl Add<Status> for Status {
             // ready + ready = ready
             (Self::Ready, Self::Ready) | // self
             // ready + error = error + ready = error
-            (Self::Error(_), Self::Ready) => self,
-            (Self::Ready, Self::Error(_)) => other,
+            (Self::Error(_,_), Self::Ready) => self,
+            (Self::Ready, Self::Error(_,_)) => other,
             // error + error = combined errors
-            (Self::Error(err_lhs), Self::Error(err_rhs)) => Self::Error(format!("{}\n{}", err_lhs, err_rhs)),
+            (Self::Error(err_lhs,size1), Self::Error(err_rhs,size2)) => Self::Error(format!("{}\n{}", err_lhs, err_rhs), size1+size2),
         }
     }
 }
@@ -39,10 +42,12 @@ impl AddAssign for Status {
             // ready + ready = ready
             (Self::Ready, Self::Ready) | // self
             // ready + error = error + ready = error
-            (Self::Error(_), Self::Ready) => { /* *self = self is redundant and also doesn't work */ }
-            (Self::Ready, Self::Error(_)) => { *self = rhs; }
+            (Self::Error(_,_), Self::Ready) => { /* *self = self is redundant and also doesn't work */ }
+            (Self::Ready, Self::Error(_,_)) => { *self = rhs; }
             // error + error = combined errors
-            (Self::Error(err_lhs), Self::Error(err_rhs)) => { *self = Self::Error(format!("{}\n{}", err_lhs, err_rhs)) }
+            (Self::Error(err_lhs, size1), Self::Error(err_rhs, size2)) => {
+                *self = Self::Error(format!("{}\n{}", err_lhs, err_rhs), size1+size2)
+            }
         }
     }
 }
@@ -53,8 +58,9 @@ impl Display for Status {
             Status::Ready => {
                 write!(f, "Ready")
             }
-            Status::Error(e) => {
-                write!(f, "Error: {}", e)
+            Status::Error(e, size) => {
+                let plural = if *size == 1 { "" } else { "s" };
+                write!(f, "{size} Error{plural}:\n{}", e)
             }
         }
     }
@@ -111,7 +117,7 @@ async fn check_staples(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Sta
         // later review of the code seems to confirm that Enable and Nothing are the 2 "ok" values and anything else is an error
         match s.as_str() {
             "Enable" | "Nothing" => { /*status += Status::Ready // redundant add */ } // no stapler is still ready i think
-            _ => status += Status::Error(format!("Stapler error for {key}: {s}")),
+            _ => status += Status::Error(format!("Stapler error for {key}: {s}"), 1),
         }
     }
     Ok(status)
@@ -129,13 +135,13 @@ async fn check_toner(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
     // the printer has a "ColorOrMono" key but i'd rather just enumerate the array directly
     for (i, color) in toner_arr.iter().enumerate() {
         let level = unwrap_json_number(color, format!("Toner 'Renaming' key {i}"))?;
-        if level < TONER_THRESHOLD {
+        if level <= TONER_THRESHOLD {
             // the actual core logic wrapped by all this error handling
             let color_name = match TONER_KEYS.get(i) {
                 Some(color) => color.to_string(),
                 None => format!("Unknown color {i}"),
             };
-            status += Status::Error(format!("{color_name} Toner is at {level}%"));
+            status += Status::Error(format!("{color_name} Toner is at {level}%"), 1);
         }
     }
     let s = unwrap_json_string(&obj["wasteToner"], "wasteToner key")?;
@@ -143,9 +149,12 @@ async fn check_toner(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
     match s.parse::<usize>()? {
         2 => { /*status += Status::Ready // redundant add */ }
         i @ (0 | 1 | 3) => {
-            status += Status::Error(format!("Waste Toner status is {}", WASTE_TONER_STATUSES[i]))
+            status += Status::Error(
+                format!("Waste Toner status is {}", WASTE_TONER_STATUSES[i]),
+                1,
+            )
         }
-        _ => status += Status::Error(format!("Waste Toner status is: unknown error {s}")),
+        _ => status += Status::Error(format!("Waste Toner status is: unknown error {s}"), 1),
     }
     Ok(status)
 }
@@ -162,18 +171,18 @@ async fn check_status(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Stat
     let pds = unwrap_json_string(&obj["PrinterDeviceStatus"], "PrinterDeviceStatus key")?;
     let pdsint = pds.parse::<usize>()?;
     if ERRORS.contains(&pdsint) {
-        status += Status::Error(format!("Printer status is {}", STATUSES[pdsint]));
+        status += Status::Error(format!("Printer status is: {}", STATUSES[pdsint]), 1);
     }
 
     let sds = unwrap_json_string(&obj["ScannerDeviceStatus"], "ScannerDeviceStatus key")?;
     let sdsint = sds.parse::<usize>()?;
     if ERRORS.contains(&sdsint) {
-        status += Status::Error(format!("Scanner status is {}", STATUSES[sdsint]));
+        status += Status::Error(format!("Scanner status is: {}", STATUSES[sdsint]), 1);
     }
 
     let pm = unwrap_json_string(&obj["PanelMessage"], "PanelMessage key")?;
     if pm != "Ready." {
-        status += Status::Error(format!("Panel message is: {pm}"));
+        status += Status::Error(format!("Panel message is: {pm}"), 1);
     }
 
     Ok(status)
@@ -181,20 +190,26 @@ async fn check_status(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Stat
 
 async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_Paper.model.htm", runtime).await?;
+    let mut status = Status::Ready;
+
     // i think we can always assume a printer has a MP tray,
     // and we have to since not all printers have a value saying if they have one
 
     // the count var includes the MP tray, so subtract it
-    let cassette_count =
-        unwrap_json_number(&obj["getCassetCount"], "getCassetCount key")? as usize - 1usize;
+    let mut cassette_count =
+        unwrap_json_number(&obj["getCassetCount"], "getCassetCount key")? as usize;
+    if let None = obj.get("mpTrayStatus") {
+        cassette_count -= 1usize // if this key doesn't exist, mptray is included in the count, subtract
+    }
+    // if the key does exist, regardless of if its 0 or 1, mptray is not included in the count and we bing chilling
 
     // getPaperStatus returns if the printer can detect the exactish paper count vs just empty/full,
     // i dont think we need it cause getCassetLevel is just fixed at 100 or level_empty which is fine
 
     let levels = unwrap_json_array(&obj["getCassetLevel"], "getCassetLevel key")?;
-    let sizes = unwrap_json_array(&obj["getCassetLevel"], "getCassetLevel key")?;
-    let types = unwrap_json_array(&obj["getCassetLevel"], "getCassetLevel key")?;
-    let capacities = unwrap_json_array(&obj["getCassetLevel"], "getCassetLevel key")?;
+    let sizes = unwrap_json_array(&obj["PaperSize"], "PaperSize key")?;
+    let types = unwrap_json_array(&obj["PaperType"], "PaperType key")?;
+    let capacities = unwrap_json_array(&obj["PaperCapacity"], "PaperCapacity key")?;
 
     for cassette in 0..cassette_count {
         let level = unwrap_json_string(&levels[cassette], format!("Cassette {cassette} level"))?;
@@ -204,9 +219,40 @@ async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
             level.parse::<usize>()?
         };
         // TODO
+        if levelint <= PAPER_THRESHOLD {
+            let paper_size_raw =
+                unwrap_json_string(&sizes[cassette], format!("Cassette {cassette} PaperSize"))?;
+            let paper_size = match PAPER_SIZES.get(paper_size_raw) {
+                None => {
+                    format!("Unknown size {paper_size_raw}")
+                }
+                Some(s) => s.to_string(),
+            };
+            let paper_type_raw =
+                unwrap_json_string(&types[cassette], format!("Cassette {cassette} PaperType"))?;
+            let media_type = match MEDIA_TYPES.get(paper_type_raw) {
+                None => {
+                    format!("Unknown media type {paper_size_raw}")
+                }
+                Some(s) => s.to_string(),
+            };
+            let paper_capacity = unwrap_json_string(
+                &capacities[cassette],
+                format!("Cassette {cassette} PaperCapacity"),
+            )?;
+            let fullness_string = if levelint == 0 {
+                "empty".to_string()
+            } else {
+                format!("{levelint}% full")
+            };
+            status += Status::Error(format!(
+                "Cassette {} is {fullness_string}. It takes {media_type} {paper_size} paper with a capacity of {paper_capacity}.",
+                cassette + 1 // 0 indexed to 1 indexed
+            ), 1);
+        }
     }
-    dbg!(&obj);
-    Ok(Status::Ready)
+    // dbg!(&obj);
+    Ok(status)
 }
 
 async fn device_info(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<String> {
@@ -245,7 +291,7 @@ pub async fn check_printer(ip: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<(
         device_info(host, runtime.clone())
     )?;
     println!(
-        "Status for {device_info}: {}",
+        "Status for {device_info}:\n{}",
         staples_obj + toner_obj + status_obj + paper_obj
     );
     Ok(())

@@ -10,7 +10,7 @@ mod r#static;
 #[tokio::main]
 async fn main() {
     let async_runtime = Arc::new(Mutex::new(js::init()));
-    check_one_printer::check_printer("  ", async_runtime.clone())
+    check_one_printer::check_printer("10.170.16.1", async_runtime.clone())
         .await
         .unwrap();
 }

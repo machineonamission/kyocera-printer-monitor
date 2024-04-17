@@ -86,7 +86,7 @@ pub static MEDIA_TYPES: phf::Map<&'static str, &'static str> = phf_map! {
     "mediatype_thinpaper" => "Thin"
 };
 // ripped this from the cursed printer js, hopefully wont change...
-pub static STATUSES: [&'static str; 16] = [
+pub static STATUSES: [&str; 16] = [
     "Printing...",
     "Scanning...",
     "Ready.",
@@ -104,15 +104,13 @@ pub static STATUSES: [&'static str; 16] = [
     "Phone is off the hook.",
     "Suspending...",
 ];
-pub static ERRORS: [usize; 3] = [
-    // map to the 3 errors above ^, also ripped from printer js
-    3, 9, 12,
-];
+// below maps to the 3 errors above ^, also ripped from printer js
+pub static ERRORS: [usize; 3] = [3, 9, 12];
 pub static WASTE_TONER_STATUSES: [&str; 4] = [
     "Warning", "Full", "OK", // seems to be only "Ready" value?
     "Removed",
 ];
 pub static TONER_KEYS: [&str; 4] = ["Black", "Cyan", "Magenta", "Yellow"];
 
-pub const TONER_THRESHOLD: f64 = 15f64;
-pub const PAPER_THRESHOLD: usize = 10usize;
+pub const TONER_THRESHOLD: f64 = 10f64;
+pub const PAPER_THRESHOLD: usize = 0usize;

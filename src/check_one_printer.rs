@@ -28,10 +28,10 @@ impl Add<Status> for Status {
             // ready + ready = ready
             (Self::Ready, Self::Ready) | // self
             // ready + error = error + ready = error
-            (Self::Error(_,_), Self::Ready) => self,
-            (Self::Ready, Self::Error(_,_)) => other,
+            (Self::Error(_, _), Self::Ready) => self,
+            (Self::Ready, Self::Error(_, _)) => other,
             // error + error = combined errors
-            (Self::Error(err_lhs,size1), Self::Error(err_rhs,size2)) => Self::Error(format!("{}\n{}", err_lhs, err_rhs), size1+size2),
+            (Self::Error(err_lhs, size1), Self::Error(err_rhs, size2)) => Self::Error(format!("{}\n{}", err_lhs, err_rhs), size1 + size2),
         }
     }
 }
@@ -42,11 +42,11 @@ impl AddAssign for Status {
             // ready + ready = ready
             (Self::Ready, Self::Ready) | // self
             // ready + error = error + ready = error
-            (Self::Error(_,_), Self::Ready) => { /* *self = self is redundant and also doesn't work */ }
-            (Self::Ready, Self::Error(_,_)) => { *self = rhs; }
+            (Self::Error(_, _), Self::Ready) => { /* *self = self is redundant and also doesn't work */ }
+            (Self::Ready, Self::Error(_, _)) => { *self = rhs; }
             // error + error = combined errors
             (Self::Error(err_lhs, size1), Self::Error(err_rhs, size2)) => {
-                *self = Self::Error(format!("{}\n{}", err_lhs, err_rhs), size1+size2)
+                *self = Self::Error(format!("{}\n{}", err_lhs, err_rhs), size1 + size2)
             }
         }
     }
@@ -181,8 +181,8 @@ async fn check_status(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Stat
     }
 
     let pm = unwrap_json_string(&obj["PanelMessage"], "PanelMessage key")?;
-    if pm != "Ready." {
-        status += Status::Error(format!("Panel message is: {pm}"), 1);
+    if let Status::Error(_, _) = status {
+        status += Status::Error(format!("Panel message is: {pm}"), 0); // 0 cause this only activates if either 2 are true errors
     }
 
     Ok(status)
@@ -218,7 +218,6 @@ async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
         } else {
             level.parse::<usize>()?
         };
-        // TODO
         if levelint <= PAPER_THRESHOLD {
             let paper_size_raw =
                 unwrap_json_string(&sizes[cassette], format!("Cassette {cassette} PaperSize"))?;
@@ -273,7 +272,14 @@ async fn device_info(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Strin
     ))
 }
 
-pub async fn check_printer(ip: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<()> {
+#[derive(Debug)]
+pub struct Printer {
+    ip: String,
+    device_info: String,
+    status: Status,
+}
+
+pub async fn check_printer(ip: String, runtime: Arc<Mutex<JsRuntime>>) -> Result<Printer> {
     let host = &format!("https://{ip}");
     /*
     staples: https://{ip}/js/jssrc/model/startwlm/Hme_StplPnch.model.htm
@@ -290,9 +296,45 @@ pub async fn check_printer(ip: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<(
         check_paper(host, runtime.clone()),
         device_info(host, runtime.clone())
     )?;
-    println!(
-        "Status for {device_info}:\n{}",
-        staples_obj + toner_obj + status_obj + paper_obj
-    );
-    Ok(())
+    Ok(Printer {
+        ip,
+        device_info,
+        status: staples_obj + toner_obj + status_obj + paper_obj,
+    })
+}
+
+pub async fn format_check_printer(
+    ip: String,
+    runtime: Arc<Mutex<JsRuntime>>,
+    list_all: bool,
+) -> (Option<String>, bool) {
+    // the bool param is if it errored so we can count them up
+    match check_printer(ip.clone(), runtime).await {
+        Ok(printer) => match printer.status {
+            Status::Ready => {
+                if list_all {
+                    (
+                        Some(format!(
+                            "{} ({}) is Ready.",
+                            printer.ip, printer.device_info
+                        )),
+                        false,
+                    )
+                } else {
+                    (None, false)
+                }
+            }
+            Status::Error(error, count) => (
+                Some(format!(
+                    "{} ({}) has {count} error{}:\n    {}",
+                    printer.ip,
+                    printer.device_info,
+                    if count == 1 { "" } else { "s" },
+                    error.replace('\n', "\n    - ")
+                )),
+                true,
+            ),
+        },
+        Err(e) => (Some(format!("Error checking {ip}: {e}")), true),
+    }
 }

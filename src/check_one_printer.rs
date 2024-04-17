@@ -108,6 +108,7 @@ async fn check_staples(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Sta
     let mut status = Status::Ready;
     for (key, val) in obj.iter() {
         let s = unwrap_json_string(val, format!("Stapler status key {key}"))?;
+        // later review of the code seems to confirm that Enable and Nothing are the 2 "ok" values and anything else is an error
         match s.as_str() {
             "Enable" | "Nothing" => { /*status += Status::Ready // redundant add */ } // no stapler is still ready i think
             _ => status += Status::Error(format!("Stapler error for {key}: {s}")),
@@ -144,7 +145,7 @@ async fn check_toner(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
         i @ (0 | 1 | 3) => {
             status += Status::Error(format!("Waste Toner status is {}", WASTE_TONER_STATUSES[i]))
         }
-        _ => status += Status::Error(format!("Waste Toner status is: {s}")),
+        _ => status += Status::Error(format!("Waste Toner status is: unknown error {s}")),
     }
     Ok(status)
 }

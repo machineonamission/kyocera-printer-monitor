@@ -16,8 +16,7 @@ enum Mode {
     ListAll,
 }
 
-#[tokio::main]
-async fn main() {
+async fn core() -> anyhow::Result<()> {
     // for debugging
     // let async_runtime = Rc::new(Mutex::new(js::init()));
     // dbg!(check_one_printer::check_printer(String::from("165.134.48.176"), async_runtime).await.unwrap());
@@ -55,7 +54,7 @@ async fn main() {
                 break;
             }
             "4" => {
-                return;
+                return Ok(());
             }
             e => {
                 println!("Invalid option: {}", e);
@@ -80,13 +79,8 @@ async fn main() {
 
     if ips.is_empty() {
         println!("Pasting from clipboard...");
-        // no i don't like unwrapping but who cares it's in main its FINE
-        let mut clipboard = Clipboard::new().expect("Failed to initialize clipboard");
-        for line in clipboard
-            .get_text()
-            .expect("Failed to paste from clipboard")
-            .lines()
-        {
+        let mut clipboard = Clipboard::new()?;
+        for line in clipboard.get_text()?.lines() {
             ips.push(line.to_string());
         }
     }
@@ -172,17 +166,28 @@ async fn main() {
             if let Mode::Spreadsheet = mode {
                 let fullout = results.join("\n");
                 println!("\n{}\n", fullout);
-                // no i don't like unwrapping but who cares it's in main its FINE
-                let mut clipboard = Clipboard::new().expect("Failed to initialize clipboard");
-                clipboard
-                    .set_text(fullout)
-                    .expect("Failed to copy to clipboard");
+                let mut clipboard = Clipboard::new()?;
+                clipboard.set_text(fullout)?;
                 println!("Results copied to clipboard.\n");
             }
+            anyhow::Ok(())
         })
-        .await;
+        .await?;
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() {
+    // this program is designed to be run by double-clicking and the OS is responsible for bringing
+    // up a terminal. those usually close immediately on exit, so wrapping this is for the best.
+    // the only errors that happen are clipboard errors but it gives me room in the future i suppose
+    if let Err(e) = core().await {
+        eprintln!("Unrecoverable error occurred: {:?}", e);
+    }
+
     println!("Press enter to exit program.");
     let mut s = String::new();
-    sin.read_line(&mut s)
+    stdin()
+        .read_line(&mut s)
         .expect("Did not enter a correct string");
 }

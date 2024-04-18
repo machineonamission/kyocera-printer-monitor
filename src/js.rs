@@ -6,27 +6,31 @@ use tokio::sync::Mutex;
 
 pub(crate) type Object = Map<String, Value>;
 
-pub struct JsRuntime {
+pub struct JsRuntime<'a> {
     platform: v8::SharedRef<v8::Platform>,
-    //TODO
+    isolate: v8::OwnedIsolate,
+    handle_scope: v8::HandleScope<'a, ()>,
+    context: v8::Local<'a, v8::Context>,
+    context_scope: v8::ContextScope<'a, v8::HandleScope<'a>>,
 }
+impl<'a> JsRuntime<'_> {
+    pub fn init(&mut self) {
+        let platform = v8::new_default_platform(0, false).make_shared();
+        v8::V8::initialize_platform(platform);
+        v8::V8::initialize();
 
-pub fn init() {
-    let platform = v8::new_default_platform(0, false).make_shared();
-    v8::V8::initialize_platform(platform);
-    v8::V8::initialize();
+        // Create a new Isolate and make it the current one.
+        self.isolate = v8::Isolate::new(v8::CreateParams::default());
 
-    // Create a new Isolate and make it the current one.
-    let isolate = &mut v8::Isolate::new(v8::CreateParams::default());
+        // Create a stack-allocated handle scope.
+        self.handle_scope = v8::HandleScope::new(&mut self.isolate);
 
-    // Create a stack-allocated handle scope.
-    let handle_scope = &mut v8::HandleScope::new(isolate);
+        // Create a new context.
+        self.context = v8::Context::new(&mut self.handle_scope);
 
-    // Create a new context.
-    let context = v8::Context::new(handle_scope);
-
-    // Enter the context for compiling and running the hello world script.
-    v8::ContextScope::new(handle_scope, context)
+        // Enter the context for compiling and running the hello world script.
+        self.context_scope = v8::ContextScope::new(&mut self.handle_scope, self.context);
+    }
 }
 
 pub fn cursed_js_to_object(runtime: &mut JsRuntime, script: String) -> Result<Object> {

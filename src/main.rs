@@ -1,6 +1,7 @@
 use std::io::stdin;
 use std::sync::Arc;
 
+use arboard::Clipboard;
 use tokio::sync::Mutex;
 
 mod check_one_printer;
@@ -63,7 +64,7 @@ async fn main() {
     }
     // get IPs
     println!(
-        "Enter in the IPs of the printers, separated by newlines. Press enter twice when you are done."
+        "Enter in the IPs of the printers, separated by newlines. Press enter twice when you are done.\nOR\nPress enter to paste from the clipboard."
     );
     let mut ips = Vec::new();
     loop {
@@ -75,6 +76,19 @@ async fn main() {
             break;
         }
         ips.push(trimmed.to_string());
+    }
+
+    if ips.is_empty() {
+        println!("Pasting from clipboard...");
+        // no i don't like unwrapping but who cares it's in main its FINE
+        let mut clipboard = Clipboard::new().expect("Failed to initialize clipboard");
+        for line in clipboard
+            .get_text()
+            .expect("Failed to paste from clipboard")
+            .lines()
+        {
+            ips.push(line.to_string());
+        }
     }
 
     let ipslen = ips.len();
@@ -156,11 +170,14 @@ async fn main() {
             );
 
             if let Mode::Spreadsheet = mode {
-                println!();
-                for result in results {
-                    println!("{}", result);
-                }
-                println!();
+                let fullout = results.join("\n");
+                println!("\n{}\n", fullout);
+                // no i don't like unwrapping but who cares it's in main its FINE
+                let mut clipboard = Clipboard::new().expect("Failed to initialize clipboard");
+                clipboard
+                    .set_text(fullout)
+                    .expect("Failed to copy to clipboard");
+                println!("Results copied to clipboard.\n");
             }
         })
         .await;

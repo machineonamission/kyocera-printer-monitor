@@ -27,6 +27,6 @@ pub async fn fetch_object(
     runtime: Arc<Mutex<JsRuntime>>,
 ) -> Result<js::Object> {
     let script = fetch(host, path).await?;
-    let obj = js::CJTO_locking(runtime, script).await?;
+    let obj = js::cjto_locking(runtime, script).await?;
     Ok(obj)
 }

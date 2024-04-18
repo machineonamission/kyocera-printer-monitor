@@ -98,11 +98,11 @@ async fn main() {
             while let Some(result) = joinset.join_next().await {
                 bar.inc(1);
                 match result {
-                    Ok(res) => {
-                        if res.1 {
+                    Ok((msg_option, errored)) => {
+                        if errored {
                             errors += 1;
                         }
-                        if let Some(printmsg) = res.0 {
+                        if let Some(printmsg) = msg_option {
                             bar.println(printmsg);
                         }
                     }

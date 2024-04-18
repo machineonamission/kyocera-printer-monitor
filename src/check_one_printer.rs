@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign};
-use std::sync::Arc;
+use std::rc::Rc;
 
 use anyhow::Result;
 use deno_core::JsRuntime;
@@ -105,7 +105,7 @@ fn unwrap_json_array(val: &Value, name: impl Display) -> Result<&Vec<Value>> {
     }
 }
 
-async fn check_staples(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
+async fn check_staples(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(
         host,
         "js/jssrc/model/startwlm/Hme_StplPnch.model.htm",
@@ -124,7 +124,7 @@ async fn check_staples(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Sta
     Ok(status)
 }
 
-async fn check_toner(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
+async fn check_toner(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_Toner.model.htm", runtime).await?;
     let mut status = Status::Ready;
 
@@ -160,7 +160,7 @@ async fn check_toner(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
     Ok(status)
 }
 
-async fn check_status(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
+async fn check_status(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(
         host,
         "js/jssrc/model/startwlm/Hme_DvcSts.model.htm",
@@ -189,7 +189,7 @@ async fn check_status(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Stat
     Ok(status)
 }
 
-async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Status> {
+async fn check_paper(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_Paper.model.htm", runtime).await?;
     let mut status = Status::Ready;
 
@@ -270,7 +270,7 @@ async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
     Ok(status)
 }
 
-async fn device_info(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<String> {
+async fn device_info(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<String> {
     // i can't get the full unique location-based names, i think they only exist on papercut and the
     // printer is completely unaware, so this will have to do
     let obj = fetch_object(
@@ -295,7 +295,7 @@ pub struct Printer {
     status: Status,
 }
 
-pub async fn check_printer(ip: String, runtime: Arc<Mutex<JsRuntime>>) -> Result<Printer> {
+pub async fn check_printer(ip: String, runtime: Rc<Mutex<JsRuntime>>) -> Result<Printer> {
     // determines if ip wants http or https
     let host = &http::get_right_host(&ip).await?;
     /*
@@ -322,7 +322,7 @@ pub async fn check_printer(ip: String, runtime: Arc<Mutex<JsRuntime>>) -> Result
 
 pub async fn format_check_printer(
     ip: String,
-    runtime: Arc<Mutex<JsRuntime>>,
+    runtime: Rc<Mutex<JsRuntime>>,
     list_all: bool,
 ) -> (Option<String>, bool) {
     // the bool param is if it errored so we can count them up
@@ -361,7 +361,7 @@ pub async fn format_check_printer(
 
 pub async fn spreadsheet_check_printer(
     ip: String,
-    runtime: Arc<Mutex<JsRuntime>>,
+    runtime: Rc<Mutex<JsRuntime>>,
 ) -> (Option<String>, bool) {
     // the bool param is if it errored so we can count them up
     match check_printer(ip.clone(), runtime).await {

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use anyhow::{anyhow, Result};
 use deno_core::JsRuntime;
@@ -54,7 +54,7 @@ pub async fn get_right_host(ip: &str) -> Result<String> {
 pub async fn fetch_object(
     host: &str,
     path: &str,
-    runtime: Arc<Mutex<JsRuntime>>,
+    runtime: Rc<Mutex<JsRuntime>>,
 ) -> Result<js::Object> {
     let script = fetch(host, path).await?;
     let obj = js::cjto_locking(runtime, script).await?;

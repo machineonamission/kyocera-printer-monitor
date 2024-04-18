@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use anyhow::{anyhow, Result};
 use deno_core::{JsRuntime, RuntimeOptions};
@@ -33,7 +33,7 @@ pub fn cursed_js_to_object(runtime: &mut JsRuntime, script: String) -> Result<Ob
     }
 }
 
-pub async fn cjto_locking(runtime: Arc<Mutex<JsRuntime>>, script: String) -> Result<Object> {
+pub async fn cjto_locking(runtime: Rc<Mutex<JsRuntime>>, script: String) -> Result<Object> {
     // grabs the lock, runs the function, and then releases the lock
     let mut runtime = runtime.lock().await;
     cursed_js_to_object(&mut runtime, script)

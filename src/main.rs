@@ -1,5 +1,5 @@
 use std::io::stdin;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use arboard::Clipboard;
 use tokio::sync::Mutex;
@@ -19,7 +19,7 @@ enum Mode {
 #[tokio::main]
 async fn main() {
     // for debugging
-    // let async_runtime = Arc::new(Mutex::new(js::init()));
+    // let async_runtime = Rc::new(Mutex::new(js::init()));
     // dbg!(check_one_printer::check_printer(String::from("165.134.48.176"), async_runtime).await.unwrap());
     // dbg!(http::get_right_host("165.134.48.176").await.unwrap());
     // dbg!(http::get_right_host("10.170.16.1").await.unwrap());
@@ -100,7 +100,7 @@ async fn main() {
     );
 
     // JS runtime wrapped in magic async stuff
-    let async_runtime = Arc::new(Mutex::new(js::init()));
+    let async_runtime = Rc::new(Mutex::new(js::init()));
 
     // results for spreadsheet mode
     let mut results = vec![String::new(); ipslen];

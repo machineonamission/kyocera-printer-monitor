@@ -112,5 +112,5 @@ pub static WASTE_TONER_STATUSES: [&str; 4] = [
 ];
 pub static TONER_KEYS: [&str; 4] = ["Black", "Cyan", "Magenta", "Yellow"];
 
-pub const TONER_THRESHOLD: f64 = 10f64;
+pub const TONER_THRESHOLD: f64 = 0f64; // TODO: make sure this works?
 pub const PAPER_THRESHOLD: usize = 0usize;

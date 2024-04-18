@@ -8,37 +8,52 @@ mod http;
 mod js;
 mod r#static;
 
+#[derive(PartialEq, Copy, Clone)]
+enum Mode {
+    Spreadsheet,
+    ListErrors,
+    ListAll,
+}
+
 #[tokio::main]
 async fn main() {
     // for debugging
     // let async_runtime = Arc::new(Mutex::new(js::init()));
-    // dbg!(check_one_printer::check_printer(String::from("165.134.134.90"), async_runtime).await.unwrap());
+    // dbg!(check_one_printer::check_printer(String::from("165.134.48.176"), async_runtime).await.unwrap());
+    // dbg!(http::get_right_host("165.134.48.176").await.unwrap());
+    // dbg!(http::get_right_host("10.170.16.1").await.unwrap());
+    // return;
 
     println!("🖨️ Welcome to Kyocera Printer Monitor!\n");
 
     // get user preferences
-    let list_all: bool;
+    let mode: Mode;
     let sin = stdin();
     loop {
         println!(
             "Choose an option:\n\
-        1) Check only for errors\n\
-        2) List all statuses of printer\n\
-        3) Exit"
+        1) Output in spreadsheet mode\n\
+        2) Print only the errors\n\
+        3) List all statuses of printers\n\
+        4) Exit"
         );
         let mut s = String::new();
         sin.read_line(&mut s)
             .expect("Did not enter a correct string");
         match s.trim() {
             "1" => {
-                list_all = false;
+                mode = Mode::Spreadsheet;
                 break;
             }
             "2" => {
-                list_all = true;
+                mode = Mode::ListErrors;
                 break;
             }
             "3" => {
+                mode = Mode::ListAll;
+                break;
+            }
+            "4" => {
                 return;
             }
             e => {
@@ -62,14 +77,19 @@ async fn main() {
         ips.push(trimmed.to_string());
     }
 
+    let ipslen = ips.len();
+
     println!(
         "Checking {} printer{}...",
-        ips.len(),
-        if ips.len() == 1 { "" } else { "s" }
+        ipslen,
+        if ipslen == 1 { "" } else { "s" }
     );
 
     // JS runtime wrapped in magic async stuff
     let async_runtime = Arc::new(Mutex::new(js::init()));
+
+    // results for spreadsheet mode
+    let mut results = vec![String::new(); ipslen];
 
     // weird fuckery with tokio to get it to do what i want
     let mut joinset = tokio::task::JoinSet::new();
@@ -77,32 +97,49 @@ async fn main() {
     localset
         .run_until(async {
             // spawn all the processes
-            let len = ips.len();
-            for ip in ips {
+            for (i, ip) in ips.into_iter().enumerate() {
                 let async_runtime_clone = async_runtime.clone();
-                joinset.spawn_local(async move {
-                    check_one_printer::format_check_printer(
-                        ip.to_owned(),
-                        async_runtime_clone,
-                        list_all,
-                    )
-                    .await
-                });
+                if let Mode::Spreadsheet = mode {
+                    joinset.spawn_local(async move {
+                        (
+                            i,
+                            check_one_printer::spreadsheet_check_printer(
+                                ip.to_owned(),
+                                async_runtime_clone,
+                            )
+                            .await,
+                        )
+                    });
+                } else {
+                    joinset.spawn_local(async move {
+                        (
+                            i,
+                            check_one_printer::format_check_printer(
+                                ip.to_owned(),
+                                async_runtime_clone,
+                                mode == Mode::ListAll,
+                            )
+                            .await,
+                        )
+                    });
+                }
             }
             let mut errors = 0;
             // progress bar for fun
-            let bar = indicatif::ProgressBar::new(len as u64);
+            let bar = indicatif::ProgressBar::new(ipslen as u64);
             bar.inc(0); // get it to display
 
             // get each result as it comes in
             while let Some(result) = joinset.join_next().await {
                 bar.inc(1);
                 match result {
-                    Ok((msg_option, errored)) => {
+                    Ok((index, (msg_option, errored))) => {
                         if errored {
                             errors += 1;
                         }
-                        if let Some(printmsg) = msg_option {
+                        if let Mode::Spreadsheet = mode {
+                            results[index] = msg_option.unwrap_or_default();
+                        } else if let Some(printmsg) = msg_option {
                             bar.println(printmsg);
                         }
                     }
@@ -114,9 +151,17 @@ async fn main() {
             }
             bar.finish_and_clear();
             println!(
-                "\nFinished checking {len} printer{}. Found {errors} with errors.",
-                if len == 1 { "" } else { "s" }
+                "\nFinished checking {ipslen} printer{}. Found {errors} with errors.",
+                if ipslen == 1 { "" } else { "s" }
             );
+
+            if let Mode::Spreadsheet = mode {
+                println!();
+                for result in results {
+                    println!("{}", result);
+                }
+                println!();
+            }
         })
         .await;
     println!("Press enter to exit program.");

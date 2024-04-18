@@ -8,6 +8,7 @@ use serde_json::Value;
 use tokio::sync::Mutex;
 use tokio::try_join;
 
+use crate::http;
 use crate::http::fetch_object;
 use crate::r#static::*;
 
@@ -274,7 +275,7 @@ async fn device_info(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Strin
     // printer is completely unaware, so this will have to do
     let obj = fetch_object(
         host,
-        "js/jssrc/model/dvcinfo/dvcconfig/DvcConfig_Config.model.htm",
+        "js/jssrc/model/dvcinfo/dvcconfig/DvcConfig_Config.model.htm?arg1=0",
         runtime,
     )
     .await?;
@@ -295,7 +296,8 @@ pub struct Printer {
 }
 
 pub async fn check_printer(ip: String, runtime: Arc<Mutex<JsRuntime>>) -> Result<Printer> {
-    let host = &format!("https://{ip}");
+    // determines if ip wants http or https
+    let host = &http::get_right_host(&ip).await?;
     /*
     staples: https://{ip}/js/jssrc/model/startwlm/Hme_StplPnch.model.htm
     toner: https://{ip}/js/jssrc/model/startwlm/Hme_Toner.model.htm
@@ -354,5 +356,27 @@ pub async fn format_check_printer(
         // intentionally not doing e:? because the stack trace is massive
         // easier to handle this here than matching later
         Err(e) => (Some(format!("Error checking {ip}: {e}")), true),
+    }
+}
+
+pub async fn spreadsheet_check_printer(
+    ip: String,
+    runtime: Arc<Mutex<JsRuntime>>,
+) -> (Option<String>, bool) {
+    // the bool param is if it errored so we can count them up
+    match check_printer(ip.clone(), runtime).await {
+        Ok(printer) => match printer.status {
+            Status::Ready => (Some("Ready".to_string()), false),
+            Status::Error(error, _) => (Some(error.replace('\n', ", ")), true),
+        },
+        // intentionally not doing e:? because the stack trace is massive
+        // easier to handle this here than matching later
+        Err(e) => (
+            Some(format!(
+                "Error checking printer: {}",
+                e.to_string().replace('\n', ", ")
+            )),
+            true,
+        ),
     }
 }

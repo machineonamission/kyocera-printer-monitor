@@ -14,7 +14,7 @@ pub fn init() -> JsRuntime {
 
 pub fn cursed_js_to_object(runtime: &mut JsRuntime, script: String) -> Result<Object> {
     let res = runtime.execute_script(
-        "<demo>",
+        "<js>",
         format!(
             "{}\n{}\n{}",
             include_str!("js_hijack_before.js"),

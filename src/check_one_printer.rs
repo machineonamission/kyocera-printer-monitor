@@ -213,10 +213,16 @@ async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
 
     for cassette in 0..cassette_count {
         let level = unwrap_json_string(&levels[cassette], format!("Cassette {cassette} level"))?;
-        let levelint = if level == "level_empty" {
+        // let level = "level_unknown"; // for debugging
+        let mut unknown = false;
+        let levelint = if "level_empty" == level {
             0usize
         } else {
-            level.parse::<usize>()?
+            // parse or else mark error
+            level.parse::<usize>().unwrap_or_else(|_| {
+                unknown = true;
+                0usize
+            })
         };
         if levelint <= PAPER_THRESHOLD {
             let paper_size_raw =
@@ -239,7 +245,16 @@ async fn check_paper(host: &str, runtime: Arc<Mutex<JsRuntime>>) -> Result<Statu
                 &capacities[cassette],
                 format!("Cassette {cassette} PaperCapacity"),
             )?;
-            let fullness_string = if levelint == 0 {
+            let fullness_string = if unknown {
+                format!(
+                    "at {}. It may not be installed",
+                    if level == "level_unknown" {
+                        "an unknown level"
+                    } else {
+                        level
+                    }
+                )
+            } else if levelint == 0 {
                 "empty".to_string()
             } else {
                 format!("{levelint}% full")

@@ -10,7 +10,11 @@ mod r#static;
 
 #[tokio::main]
 async fn main() {
-    println!("Welcome to Kyocera Printer Monitor");
+    // for debugging
+    // let async_runtime = Arc::new(Mutex::new(js::init()));
+    // dbg!(check_one_printer::check_printer(String::from("165.134.134.90"), async_runtime).await.unwrap());
+
+    println!("🖨️ Welcome to Kyocera Printer Monitor!\n");
 
     // get user preferences
     let list_all: bool;

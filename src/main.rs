@@ -7,7 +7,10 @@ use tokio::sync::Mutex;
 mod check_one_printer;
 mod http;
 mod js;
+mod json_utils;
 mod r#static;
+mod status;
+mod update;
 
 #[derive(PartialEq, Copy, Clone)]
 enum Mode {
@@ -24,7 +27,16 @@ async fn core() -> anyhow::Result<()> {
     // dbg!(http::get_right_host("10.170.16.1").await.unwrap());
     // return;
 
-    println!("🖨️ Welcome to Kyocera Printer Monitor!\n");
+    println!(
+        "🖨️ Welcome to Kyocera Printer Monitor v{}!\n",
+        env!("CARGO_PKG_VERSION")
+    );
+    tokio::spawn(async move {
+        if let Err(e) = update::check_for_updates().await {
+            eprintln!("Error checking for updates: {e}\n\
+            You can see the latest version here: https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest");
+        }
+    });
 
     // get user preferences
     let mode: Mode;

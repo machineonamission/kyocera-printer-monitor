@@ -224,9 +224,9 @@ dependencies = [
 
 [[package]]
 name = "deno_core"
-version = "0.276.0"
+version = "0.277.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37ad5514ce34b82d2ba04c83c3d80a4f87bd992aa50f52c1ee3098f1a157770f"
+checksum = "3c562e5660bfaebd9565e938402c55f482faab0c4bd7a784817d9696a9c9cdf0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -261,9 +261,9 @@ checksum = "a13951ea98c0a4c372f162d669193b4c9d991512de9f2381dd161027f34b26b1"
 
 [[package]]
 name = "deno_ops"
-version = "0.152.0"
+version = "0.153.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1735406b56fe910c108c26c87fafe68c9cc3a22611936cae11ece212579742f4"
+checksum = "ad83b1a23861e77c36c2e7d0158a24d613c8a2303b423d0a2c21b27bc199821c"
 dependencies = [
  "proc-macro-rules",
  "proc-macro2",
@@ -705,7 +705,7 @@ dependencies = [
 
 [[package]]
 name = "kyocera-printer-monitor"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -713,6 +713,7 @@ dependencies = [
  "indicatif",
  "phf",
  "reqwest",
+ "semver 1.0.22",
  "serde_json",
  "tokio",
 ]
@@ -1147,9 +1148,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e6cc1e89e689536eb5aeede61520e874df5a4707df811cd5da4aa5fbb2aae19"
+checksum = "566cafdd92868e0939d3fb961bd0dc25fcfaaed179291093b3d43e6b3150ea10"
 dependencies = [
  "base64",
  "bytes",
@@ -1205,7 +1206,7 @@ version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
 dependencies = [
- "semver",
+ "semver 0.9.0",
 ]
 
 [[package]]
@@ -1297,6 +1298,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "semver"
+version = "1.0.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92d43fe69e652f3df9bdc2b85b2854a0825b86e4fb76bc44d945137d053639ca"
+
+[[package]]
 name = "semver-parser"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1324,9 +1331,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.115"
+version = "1.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12dc5c46daa8e9fdf4f5e71b6cf9a53f2487da0e86e55808e2d35539666497dd"
+checksum = "3e17db7126d17feb94eb3fad46bf1a96b034e8aacbc2e775fe81505f8b0b2813"
 dependencies = [
  "indexmap",
  "itoa",
@@ -1348,9 +1355,9 @@ dependencies = [
 
 [[package]]
 name = "serde_v8"
-version = "0.185.0"
+version = "0.186.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2996c205d6a331298c5ea0f4b28680d3003068f6f6bb7da8966ace7cc18cc73f"
+checksum = "ed95f28fe0e7082a4bf8b914d14d3876e21340fab5c088556496e5c4b26cfedb"
 dependencies = [
  "bytes",
  "num-bigint",

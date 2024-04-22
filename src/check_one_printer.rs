@@ -1,5 +1,3 @@
-use std::fmt::{Display, Formatter};
-use std::ops::{Add, AddAssign};
 use std::rc::Rc;
 
 use anyhow::Result;
@@ -8,102 +6,10 @@ use serde_json::Value;
 use tokio::sync::Mutex;
 use tokio::try_join;
 
-use crate::http;
 use crate::http::fetch_object;
 use crate::r#static::*;
-
-#[derive(Debug)]
-pub enum Status {
-    Ready,
-    Error(
-        String, // error message(s)
-        usize,  // number of errors
-    ),
-}
-
-impl Add<Status> for Status {
-    type Output = Status;
-    fn add(self, other: Status) -> Status {
-        // combine two errors
-        match (&self, &other) {
-            // ready + ready = ready
-            (Self::Ready, Self::Ready) | // self
-            // ready + error = error + ready = error
-            (Self::Error(_, _), Self::Ready) => self,
-            (Self::Ready, Self::Error(_, _)) => other,
-            // error + error = combined errors
-            (Self::Error(err_lhs, size1), Self::Error(err_rhs, size2)) => Self::Error(format!("{}\n{}", err_lhs, err_rhs), size1 + size2),
-        }
-    }
-}
-
-impl AddAssign for Status {
-    fn add_assign(&mut self, rhs: Self) {
-        match (&self, &rhs) {
-            // ready + ready = ready
-            (Self::Ready, Self::Ready) | // self
-            // ready + error = error + ready = error
-            (Self::Error(_, _), Self::Ready) => { /* *self = self is redundant and also doesn't work */ }
-            (Self::Ready, Self::Error(_, _)) => { *self = rhs; }
-            // error + error = combined errors
-            (Self::Error(err_lhs, size1), Self::Error(err_rhs, size2)) => {
-                *self = Self::Error(format!("{}\n{}", err_lhs, err_rhs), size1 + size2)
-            }
-        }
-    }
-}
-
-impl Display for Status {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Status::Ready => {
-                write!(f, "Ready")
-            }
-            Status::Error(e, size) => {
-                let plural = if *size == 1 { "" } else { "s" };
-                write!(f, "{size} Error{plural}:\n{}", e)
-            }
-        }
-    }
-}
-
-fn unwrap_json_string(val: &Value, name: impl Display) -> Result<&String> {
-    // pulls String out of Value
-    // name is just for debugging/tracing, not strictly necessary for functionality
-    if let Value::String(s) = val {
-        Ok(s)
-    } else {
-        Err(anyhow::anyhow!(
-            "{name} is not a string, but instead: {val:?}"
-        ))
-    }
-}
-
-fn unwrap_json_number(val: &Value, name: impl Display) -> Result<f64> {
-    // pulls f64 out of Value
-    // name is just for debugging/tracing, not strictly necessary for functionality
-    let Value::Number(num) = val else {
-        return Err(anyhow::anyhow!(
-            "{name} is not a number but instead a {val:?}."
-        ));
-    };
-    let Some(num) = num.as_f64() else {
-        return Err(anyhow::anyhow!("{name} {num:?} is not a valid f64."));
-    };
-    Ok(num)
-}
-
-fn unwrap_json_array(val: &Value, name: impl Display) -> Result<&Vec<Value>> {
-    // pulls Vec out of Value
-    // name is just for debugging/tracing, not strictly necessary for functionality
-    if let Value::Array(s) = val {
-        Ok(s)
-    } else {
-        Err(anyhow::anyhow!(
-            "{name} is not an array, but instead: {val:?}"
-        ))
-    }
-}
+use crate::status::Status;
+use crate::{http, json_utils::*};
 
 async fn check_staples(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status> {
     let obj = fetch_object(

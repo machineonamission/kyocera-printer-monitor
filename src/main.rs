@@ -1,6 +1,7 @@
 use std::io::stdin;
 use std::rc::Rc;
 
+use anyhow::Result;
 use arboard::Clipboard;
 use tokio::sync::Mutex;
 
@@ -8,18 +9,19 @@ mod check_one_printer;
 mod http;
 mod js;
 mod json_utils;
+mod remember;
 mod r#static;
 mod status;
 mod update;
 
 #[derive(PartialEq, Copy, Clone)]
-enum Mode {
+enum OutputMode {
     Spreadsheet,
     ListErrors,
     ListAll,
 }
 
-async fn core() -> anyhow::Result<()> {
+async fn core() -> Result<()> {
     // for debugging
     // let async_runtime = Rc::new(Mutex::new(js::init()));
     // dbg!(check_one_printer::check_printer(String::from("165.134.48.176"), async_runtime).await.unwrap());
@@ -39,14 +41,14 @@ async fn core() -> anyhow::Result<()> {
     });
 
     // get user preferences
-    let mode: Mode;
+    let outmode: OutputMode;
     let sin = stdin();
     loop {
         println!(
-            "Choose an option:\n\
+            "How should the results be shown?:\n\
         1) Output in spreadsheet mode\n\
-        2) Print only the errors\n\
-        3) List all statuses of printers\n\
+        2) List only the errors\n\
+        3) List statuses of all printers\n\
         4) Exit"
         );
         let mut s = String::new();
@@ -54,15 +56,15 @@ async fn core() -> anyhow::Result<()> {
             .expect("Did not enter a correct string");
         match s.trim() {
             "1" => {
-                mode = Mode::Spreadsheet;
+                outmode = OutputMode::Spreadsheet;
                 break;
             }
             "2" => {
-                mode = Mode::ListErrors;
+                outmode = OutputMode::ListErrors;
                 break;
             }
             "3" => {
-                mode = Mode::ListAll;
+                outmode = OutputMode::ListAll;
                 break;
             }
             "4" => {
@@ -73,27 +75,91 @@ async fn core() -> anyhow::Result<()> {
             }
         }
     }
+
     // get IPs
-    println!(
-        "Enter in the IPs of the printers, separated by newlines. Press enter twice when you are done.\nOR\nPress enter to paste from the clipboard."
-    );
     let mut ips = Vec::new();
+    let sin = stdin();
+    let mut retrieved_from_file;
     loop {
+        println!(
+            "How will the printers be inputted?:\n\
+        1) Use same printers as last time\n\
+        2) Paste from clipboard\n\
+        3) Enter manually\n\
+        4) Exit"
+        );
+        retrieved_from_file = false;
         let mut s = String::new();
         sin.read_line(&mut s)
             .expect("Did not enter a correct string");
-        let trimmed = s.trim();
-        if trimmed.is_empty() {
+        match s.trim() {
+            "1" => {
+                // reuse mode
+                let ok = remember::printer_list_exists()?;
+                if ok {
+                    ips = remember::read_printer_list()?;
+                    retrieved_from_file = true;
+                } else {
+                    // i forgor 💀
+                    println!("No saved printer list found. Run the program once to save a list.");
+                    continue; // ask again for input, maybe the user didnt know
+                }
+            }
+            "2" => {
+                // paste mode
+                println!("Pasting from clipboard...");
+                let mut clipboard = Clipboard::new()?;
+                for line in clipboard.get_text()?.lines() {
+                    ips.push(line.trim().to_string());
+                }
+            }
+            "3" => {
+                // manual input mode
+                println!(
+                    "Enter in the IPs of the printers, separated by newlines. Press enter twice when you are done."
+                );
+                // repeatedly loop over stdin until we get an empty line, so the user can input multiple lines
+                loop {
+                    let mut s = String::new();
+                    sin.read_line(&mut s)
+                        .expect("Did not enter a correct string");
+                    let trimmed = s.trim();
+                    if trimmed.is_empty() {
+                        break;
+                    }
+                    ips.push(trimmed.to_string());
+                }
+            }
+            "4" => {
+                // exit program
+                return Ok(());
+            }
+            e => {
+                println!("Invalid option: {}", e);
+                continue;
+            }
+        }
+        // clear empty entries
+        ips.retain(|s| !s.trim().is_empty());
+        // double check we actually got printers just for idiotproofing sake
+        if ips.is_empty() {
+            println!("Error: 0 printers entered.");
+            continue;
+        } else {
+            // we have a list with ips! yippee!
             break;
         }
-        ips.push(trimmed.to_string());
     }
-
-    if ips.is_empty() {
-        println!("Pasting from clipboard...");
-        let mut clipboard = Clipboard::new()?;
-        for line in clipboard.get_text()?.lines() {
-            ips.push(line.to_string());
+    // it would be dumb to save the list if we just got it from a file
+    if !retrieved_from_file {
+        // match here cause there's no point quitting the program if this fails
+        match remember::store_printer_list(&ips) {
+            Ok(_) => {
+                println!("Printer list saved to your computer! Choose \"Use same printers as last time\" next time to use it again.");
+            }
+            Err(e) => {
+                println!("Error saving printer list: {:?}", e);
+            }
         }
     }
 
@@ -119,7 +185,7 @@ async fn core() -> anyhow::Result<()> {
             // spawn all the processes
             for (i, ip) in ips.into_iter().enumerate() {
                 let async_runtime_clone = async_runtime.clone();
-                if let Mode::Spreadsheet = mode {
+                if let OutputMode::Spreadsheet = outmode {
                     joinset.spawn_local(async move {
                         (
                             i,
@@ -137,7 +203,7 @@ async fn core() -> anyhow::Result<()> {
                             check_one_printer::format_check_printer(
                                 ip.to_owned(),
                                 async_runtime_clone,
-                                mode == Mode::ListAll,
+                                outmode == OutputMode::ListAll,
                             )
                             .await,
                         )
@@ -157,7 +223,7 @@ async fn core() -> anyhow::Result<()> {
                         if errored {
                             errors += 1;
                         }
-                        if let Mode::Spreadsheet = mode {
+                        if let OutputMode::Spreadsheet = outmode {
                             results[index] = msg_option.unwrap_or_default();
                         } else if let Some(printmsg) = msg_option {
                             bar.println(printmsg);
@@ -175,7 +241,7 @@ async fn core() -> anyhow::Result<()> {
                 if ipslen == 1 { "" } else { "s" }
             );
 
-            if let Mode::Spreadsheet = mode {
+            if let OutputMode::Spreadsheet = outmode {
                 let fullout = results.join("\n");
                 println!("\n{}\n", fullout);
                 let mut clipboard = Clipboard::new()?;

@@ -30,6 +30,13 @@ jobs:
             name: ${{ github.event.repository.name }}-x86_64-pc-windows-msvc.exe
             command: build
 
+          - release_for: Windows-ARM
+            os: windows-latest
+            target: aarch64-pc-windows-msvc
+            bin: ${{ github.event.repository.name }}.exe
+            name: ${{ github.event.repository.name }}-aarch64-pc-windows-msvc.exe
+            command: build
+
           - release_for: macOS-x86_64
             os: macOS-latest
             target: x86_64-apple-darwin
@@ -53,7 +60,7 @@ jobs:
       - name: Cache
         uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.platform.target }}
+          key: ${{ matrix.platform.target }}  # not sure if this is necessary but it makes me sleep at night
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:
@@ -65,6 +72,7 @@ jobs:
       - name: Publish release artifacts
         uses: actions/upload-artifact@v4
         with:
+          # github forces these to be a zip which is dumb but whatever might as well embrace it,,,
           name: ${{ matrix.platform.name }}
           path: "./target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}"
 #          compression-level: 0

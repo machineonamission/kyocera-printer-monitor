@@ -50,11 +50,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Load Cache
+      - name: Cache
         uses: Swatinem/rust-cache@v2
         with:
-          save-if: false
-          shared-key: ${{ matrix.platform.target }}
+          key: ${{ matrix.platform.target }}
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:
@@ -63,11 +62,6 @@ jobs:
           args: "--locked --release"
           strip: true
           toolchain: nightly
-      - name: Save Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          save-if: true
-          shared-key: ${{ matrix.platform.target }}
       - name: Publish release artifacts
         uses: actions/upload-artifact@v4
         with:

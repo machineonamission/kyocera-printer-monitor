@@ -1,3 +1,9 @@
+# DEPRECATED IN FAVOR OF GH ACTIONS
+
+Write-Output "CROSSBUILD IS DEPRECATED IN FAVOR OF GITHUB ACTIONS"
+Write-Output "https://github.com/reticivis-net/kyocera-printer-monitor/actions/workflows/build.yml"
+Exit
+
 # setup
 # install cargo-toolchain
 #  https://github.com/cross-rs/cross-toolchains?tab=readme-ov-file#cross-toolchains

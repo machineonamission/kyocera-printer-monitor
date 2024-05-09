@@ -51,7 +51,7 @@ jobs:
       - name: Load Cache
         uses: Swatinem/rust-cache@v2
         with:
-          safe-if: false
+          save-if: false
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:

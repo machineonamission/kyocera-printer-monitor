@@ -52,6 +52,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           save-if: false
+          key: ${{ matrix.platform.target }}
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:
@@ -64,6 +65,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           save-if: true
+          key: ${{ matrix.platform.target }}
       - name: Publish release artifacts
         uses: actions/upload-artifact@v4
         with:

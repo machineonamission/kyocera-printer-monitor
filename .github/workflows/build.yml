@@ -10,36 +10,36 @@ jobs:
           - release_for: Linux-x86_64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            bin: kyocera-printer-monitor
-            name: kyocera-printer-monitor-x86_64-unknown-linux-gnu.tar.gz
+            bin: ${{ github.event.repository.name }}
+            name: ${{ github.event.repository.name }}-x86_64-unknown-linux-gnu
             command: build
 
           - release_for: Linux-ARM
             os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            bin: kyocera-printer-monitor
-            name: kyocera-printer-monitor-aarch64-unknown-linux-gnu.tar.gz
+            bin: ${{ github.event.repository.name }}
+            name: ${{ github.event.repository.name }}-aarch64-unknown-linux-gnu
             command: build
 
           - release_for: Windows-x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            bin: precious.exe
-            name: kyocera-printer-monitor-x86_64-pc-windows-msvc.zip
+            bin: ${{ github.event.repository.name }}.exe
+            name: ${{ github.event.repository.name }}-x86_64-pc-windows-msvc.exe
             command: build
 
           - release_for: macOS-x86_64
             os: macOS-latest
             target: x86_64-apple-darwin
-            bin: precious
-            name: kyocera-printer-monitor-x86_64-apple-darwin.tar.gz
+            bin: ${{ github.event.repository.name }}
+            name: ${{ github.event.repository.name }}-x86_64-apple-darwin
             command: build
 
           - release_for: macOS-ARM
             os: macOS-latest
             target: aarch64-apple-darwin
-            bin: precious
-            name: kyocera-printer-monitor-aarch64-apple-darwin.tar.gz
+            bin: ${{ github.event.repository.name }}
+            name: ${{ github.event.repository.name }}-aarch64-apple-darwin
             command: build
 
             # more release targets here ...
@@ -47,7 +47,7 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Cache
 #        run: rustup toolchain install nightly --profile minimal
         uses: Swatinem/rust-cache@v2
@@ -59,3 +59,8 @@ jobs:
           args: "--locked --release"
           strip: true
           toolchain: nightly
+      - name: Publish release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform.name }}
+          path: "./target/release/${{ matrix.platform.bin }}"

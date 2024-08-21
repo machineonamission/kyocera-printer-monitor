@@ -254,18 +254,22 @@ async fn core() -> Result<()> {
     Ok(())
 }
 
-#[tokio::main]
-async fn main() {
+// #[tokio::main]
+fn main() {
+    let js = kg_js::JsEngine::new().unwrap();
+    js.eval("'12' + '12'").unwrap();
+    dbg!(js.get_string(0));
+
     // this program is designed to be run by double-clicking and the OS is responsible for bringing
     // up a terminal. those usually close immediately on exit, so wrapping this is for the best.
     // the only errors that happen are clipboard errors but it gives me room in the future i suppose
-    if let Err(e) = core().await {
-        eprintln!("Unrecoverable error occurred: {:?}", e);
-    }
-
-    println!("Press enter to exit program.");
-    let mut s = String::new();
-    stdin()
-        .read_line(&mut s)
-        .expect("Did not enter a correct string");
+    // if let Err(e) = core().await {
+    //     eprintln!("Unrecoverable error occurred: {:?}", e);
+    // }
+    //
+    // println!("Press enter to exit program.");
+    // let mut s = String::new();
+    // stdin()
+    //     .read_line(&mut s)
+    //     .expect("Did not enter a correct string");
 }

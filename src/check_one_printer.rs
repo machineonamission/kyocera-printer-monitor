@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use anyhow::Result;
-use deno_core::JsRuntime;
+use kg_js::JsEngine;
 use serde_json::Value;
 use tokio::sync::Mutex;
 use tokio::try_join;
@@ -11,7 +11,7 @@ use crate::r#static::*;
 use crate::status::Status;
 use crate::{http, json_utils::*};
 
-async fn check_staples(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status> {
+async fn check_staples(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status> {
     let obj = fetch_object(
         host,
         "js/jssrc/model/startwlm/Hme_StplPnch.model.htm",
@@ -30,7 +30,7 @@ async fn check_staples(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Stat
     Ok(status)
 }
 
-async fn check_toner(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status> {
+async fn check_toner(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_Toner.model.htm", runtime).await?;
     let mut status = Status::Ready;
 
@@ -66,7 +66,7 @@ async fn check_toner(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status
     Ok(status)
 }
 
-async fn check_status(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status> {
+async fn check_status(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status> {
     let obj = fetch_object(
         host,
         "js/jssrc/model/startwlm/Hme_DvcSts.model.htm",
@@ -95,7 +95,7 @@ async fn check_status(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Statu
     Ok(status)
 }
 
-async fn check_paper(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status> {
+async fn check_paper(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_Paper.model.htm", runtime).await?;
     let mut status = Status::Ready;
 
@@ -176,7 +176,7 @@ async fn check_paper(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<Status
     Ok(status)
 }
 
-async fn device_info(host: &str, runtime: Rc<Mutex<JsRuntime>>) -> Result<String> {
+async fn device_info(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<String> {
     // i can't get the full unique location-based names, i think they only exist on papercut and the
     // printer is completely unaware, so this will have to do
     let obj = fetch_object(
@@ -201,7 +201,7 @@ pub struct Printer {
     status: Status,
 }
 
-pub async fn check_printer(ip: String, runtime: Rc<Mutex<JsRuntime>>) -> Result<Printer> {
+pub async fn check_printer(ip: String, runtime: Rc<Mutex<JsEngine>>) -> Result<Printer> {
     // determines if ip wants http or https
     let host = &http::get_right_host(&ip).await?;
     /*
@@ -228,7 +228,7 @@ pub async fn check_printer(ip: String, runtime: Rc<Mutex<JsRuntime>>) -> Result<
 
 pub async fn format_check_printer(
     ip: String,
-    runtime: Rc<Mutex<JsRuntime>>,
+    runtime: Rc<Mutex<JsEngine>>,
     list_all: bool,
 ) -> (Option<String>, bool) {
     // the bool param is if it errored so we can count them up
@@ -267,7 +267,7 @@ pub async fn format_check_printer(
 
 pub async fn spreadsheet_check_printer(
     ip: String,
-    runtime: Rc<Mutex<JsRuntime>>,
+    runtime: Rc<Mutex<JsEngine>>,
 ) -> (Option<String>, bool) {
     // the bool param is if it errored so we can count them up
     match check_printer(ip.clone(), runtime).await {

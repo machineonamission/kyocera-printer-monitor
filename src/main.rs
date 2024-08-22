@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use anyhow::Result;
 use arboard::Clipboard;
+use kg_js::JsEngine;
 use tokio::sync::Mutex;
 
 mod check_one_printer;
@@ -172,7 +173,7 @@ async fn core() -> Result<()> {
     );
 
     // JS runtime wrapped in magic async stuff
-    let async_runtime = Rc::new(Mutex::new(js::init()));
+    let async_runtime = Rc::new(Mutex::new(JsEngine::new()?));
 
     // results for spreadsheet mode
     let mut results = vec![String::new(); ipslen];

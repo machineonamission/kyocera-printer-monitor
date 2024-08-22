@@ -80,20 +80,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      # download step unzips artifacts?
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts
 
-      - name: Unzip artifacts
-        run: |
-          mkdir unzipped
-          for file in ./artifacts/*.zip; do
-            unzip -o "$file" -d ./unzipped
-          done
-
       - name: Zip all files
-        run: zip -r aggregate.zip ./unzipped
+        run: zip -r aggregate.zip ./artifacts
 
       - name: Upload final zip
         uses: actions/upload-artifact@v4

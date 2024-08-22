@@ -31,12 +31,12 @@ jobs:
             command: build
 
           # this no worky because no premade v8 binary for windows-arm
-          # - release_for: Windows-ARM
-          #   os: windows-latest
-          #   target: aarch64-pc-windows-msvc
-          #   bin: ${{ github.event.repository.name }}.exe
-          #   name: ${{ github.event.repository.name }}-aarch64-pc-windows-msvc.exe
-          #   command: build
+          - release_for: Windows-ARM
+            os: windows-latest
+            target: aarch64-pc-windows-msvc
+            bin: ${{ github.event.repository.name }}.exe
+            name: ${{ github.event.repository.name }}-aarch64-pc-windows-msvc.exe
+            command: build
 
           - release_for: macOS-x86_64
             os: macOS-latest

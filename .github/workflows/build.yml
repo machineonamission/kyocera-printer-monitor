@@ -80,14 +80,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      # download step unzips artifacts?
+      # download step unzips artifacts
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: ./artifacts
-
+          path: ./downloads
+      - name: Move binaries
+        run: |
+          mkdir artifacts
+          mv ./downloads/**/* ./artifacts
       - name: Upload final zip
         uses: actions/upload-artifact@v4
         with:
           name: aggregate
-          path: ./artifacts/**/*
+          path: ./artifacts/*

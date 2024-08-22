@@ -86,11 +86,8 @@ jobs:
         with:
           path: ./artifacts
 
-      - name: Zip all files
-        run: zip -r aggregate.zip ./artifacts
-
       - name: Upload final zip
         uses: actions/upload-artifact@v4
         with:
           name: aggregate
-          path: aggregate.zip
+          path: ./artifacts/**/*

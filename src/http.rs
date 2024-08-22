@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use anyhow::{anyhow, Result};
-use deno_core::JsRuntime;
+use kg_js::JsEngine;
 use tokio::sync::Mutex;
 
 use crate::js;
@@ -54,7 +54,7 @@ pub async fn get_right_host(ip: &str) -> Result<String> {
 pub async fn fetch_object(
     host: &str,
     path: &str,
-    runtime: Rc<Mutex<JsRuntime>>,
+    runtime: Rc<Mutex<JsEngine>>,
 ) -> Result<js::Object> {
     let script = fetch(host, path).await?;
     let obj = js::cjto_locking(runtime, script).await?;

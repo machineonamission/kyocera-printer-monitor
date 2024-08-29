@@ -7,12 +7,23 @@ _a highly specialized Rust program designed to make monitoring a fleet of Kyocer
 Kyocera Printer Monitor is a simple downloadable program that can rapidly scan a large amount of Kyocera printers for
 errors, such as missing paper or toner. All you need is their IPs.
 
+## 📦 Download
+
+Either download the file
+from [the releases tab](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest), or get it from the
+table below. The rows are different operating systems, and the columns are different CPU architectures. If you aren't
+sure of your architecture, get x86.
+
+|             |                                                                                   **x86** (Intel or AMD)                                                                                    |                                                                                **ARM** (or Apple Silicon)                                                                                |
+|:-----------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| **Windows** | [kyocera-printer-monitor-x86\_64-pc-windows-msvc.exe](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-x86_64-pc-windows-msvc.exe) |  [kyocera-printer-monitor-aarch64-windows-msvc.exe](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-aarch64-windows-msvc.exe)  |
+|  **MacOS**  |        [kyocera-printer-monitor-x86\_64-apple-darwin](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-x86_64-apple-darwin)        |      [kyocera-printer-monitor-aarch64-apple-darwin](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-aarch64-apple-darwin)      |
+|  **Linux**  |   [kyocera-printer-monitor-x86\_64-unknown-linux-gnu](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-x86_64-unknown-linux-gnu)   | [kyocera-printer-monitor-aarch64-unknown-linux-gnu](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-aarch64-unknown-linux-gnu) |
+
 ## 🚀 How to use
 
-1. Download the latest release from the [releases page](./releases/latest). Make sure you're downloading the correct
-   version for your operating system (Windows, Mac, or Linux) and CPU (x86 or ARM).
-2. Run it by double-clicking the executable, or by calling it in your terminal.
-3. Choose how the output should be formatted.
+1. Run the downloaded file by double-clicking the executable, or by calling it in your terminal.
+2. Choose how the output should be formatted.
     1. **Output in spreadsheet mode**
 
    This will output the status of each printer on a separate line in the order they're inputted, designed to be pasted
@@ -23,7 +34,7 @@ errors, such as missing paper or toner. All you need is their IPs.
     3. **List statuses of all printers**
 
    This will output the status of all printers, regardless of whether they have errors or not.
-4. Choose how the IPs of the printers should be inputted.
+3. Choose how the IPs of the printers should be inputted.
     1. **Use same printers as last time**
 
    This will use the same printers as the last time you ran the program.
@@ -34,5 +45,5 @@ errors, such as missing paper or toner. All you need is their IPs.
     3. **Enter manually**
 
    This will prompt you to enter the IPs of the printers manually, separated by newlines.
-5. The program will then scan the printers and output the results in the format you chose.
+4. The program will then scan the printers and output the results in the format you chose.
 

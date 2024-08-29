@@ -262,6 +262,7 @@ async fn main() {
     // the only errors that happen are clipboard errors but it gives me room in the future i suppose
     if let Err(e) = core().await {
         eprintln!("Unrecoverable error occurred: {:?}", e);
+        eprintln!("Please report this on the GitHub: https://github.com/reticivis-net/kyocera-printer-monitor/issues/new")
     }
 
     println!("Press enter to exit program.");

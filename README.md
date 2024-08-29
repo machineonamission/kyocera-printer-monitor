@@ -26,24 +26,31 @@ sure of your architecture, get x86.
 2. Choose how the output should be formatted.
     1. **Output in spreadsheet mode**
 
-   This will output the status of each printer on a separate line in the order they're inputted, designed to be pasted
+       This will output the status of each printer on a separate line in the order they're inputted, designed to be pasted
    into a spreadsheet easily. The output will automatically be copied to the clipboard.
+
     2. **List only the errors**
 
-   This will output only the printers that have errors, and the errors they have.
+       This will output only the printers that have errors, and the errors they have.
+
     3. **List statuses of all printers**
 
-   This will output the status of all printers, regardless of whether they have errors or not.
+       This will output the status of all printers, regardless of whether they have errors or not.
+
 3. Choose how the IPs of the printers should be inputted.
+
     1. **Use same printers as last time**
 
-   This will use the same printers as the last time you ran the program.
+       This will use the same printers as the last time you ran the program.
+
     2. **Paste from clipboard**
 
-   This will use the contents of your clipboard as the IPs of the printers, separated by newlines. Use this option if
+       This will use the contents of your clipboard as the IPs of the printers, separated by newlines. Use this option if
    you're copying a column of a spreadsheet of IPs.
+
     3. **Enter manually**
 
-   This will prompt you to enter the IPs of the printers manually, separated by newlines.
+       This will prompt you to enter the IPs of the printers manually, separated by newlines.
+
 4. The program will then scan the printers and output the results in the format you chose.
 

@@ -42,13 +42,21 @@ async fn check_toner(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status>
     // the printer has a "ColorOrMono" key but i'd rather just enumerate the array directly
     for (i, color) in toner_arr.iter().enumerate() {
         let level = unwrap_json_number(color, format!("Toner 'Renaming' key {i}"))?;
-        if level <= TONER_THRESHOLD {
+        if level <= TONER_THRESHOLD || level == -1f64 {
             // the actual core logic wrapped by all this error handling
             let color_name = match TONER_KEYS.get(i) {
                 Some(color) => color.to_string(),
                 None => format!("Unknown color {i}"),
             };
-            status += Status::Error(format!("{color_name} Toner is at {level}%"), 1);
+            // -1 seems to be an error state
+            if level == -1f64 {
+                status += Status::Error(
+                    format!("{color_name} Toner is at an unknown level. It may be empty or not installed."),
+                    1,
+                );
+            } else {
+                status += Status::Error(format!("{color_name} Toner is at {level}%"), 1);
+            }
         }
     }
     let s = unwrap_json_string(&obj["wasteToner"], "wasteToner key")?;
@@ -154,7 +162,7 @@ async fn check_paper(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status>
             )?;
             let fullness_string = if unknown {
                 format!(
-                    "at {}. It may not be installed",
+                    "at {}. It may be empty or not installed",
                     if level == "level_unknown" {
                         "an unknown level"
                     } else {

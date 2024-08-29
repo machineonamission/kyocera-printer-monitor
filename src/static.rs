@@ -107,10 +107,12 @@ pub static STATUSES: [&str; 16] = [
 // below maps to the 3 errors above ^, also ripped from printer js
 pub static ERRORS: [usize; 3] = [3, 9, 12];
 pub static WASTE_TONER_STATUSES: [&str; 4] = [
-    "Warning", "Full", "OK", // seems to be only "Ready" value?
+    "Warning", //
+    "Full",    //
+    "OK",      // seems to be only "Ready" value?
     "Removed",
 ];
 pub static TONER_KEYS: [&str; 4] = ["Black", "Cyan", "Magenta", "Yellow"];
 
-pub const TONER_THRESHOLD: f64 = 0f64; // TODO: make sure this works?
+pub const TONER_THRESHOLD: f64 = 0f64;
 pub const PAPER_THRESHOLD: usize = 0usize;

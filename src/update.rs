@@ -9,7 +9,7 @@ pub async fn check_for_updates() -> Result<()> {
         .danger_accept_invalid_certs(true)
         .user_agent("Kyocera Printer Monitor")
         .build()?
-        .get("https://api.github.com/repos/reticivis-net/kyocera-printer-monitor/releases/latest")
+        .get("https://api.github.com/repos/machineonamission/kyocera-printer-monitor/releases/latest")
         .send()
         .await?
         .text()
@@ -23,7 +23,7 @@ pub async fn check_for_updates() -> Result<()> {
         println!(
             "🔔 A new version of Kyocera Printer Monitor is available! \
         You are using v{current_ver}, but v{new_ver} is available. Get it here:\n\
-        https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest"
+        https://github.com/machineonamission/kyocera-printer-monitor/releases/latest"
         );
     }
 

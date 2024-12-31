@@ -10,15 +10,15 @@ errors, such as missing paper or toner. All you need is their IPs.
 ## 📦 Download
 
 Either download the file
-from [the releases tab](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest), or get it from the
+from [the releases tab](https://github.com/machineonamission/kyocera-printer-monitor/releases/latest), or get it from the
 table below. The rows are different operating systems, and the columns are different CPU architectures. If you aren't
 sure of your architecture, get x86.
 
 |             |                                                                                   **x86** (Intel or AMD)                                                                                    |                                                                                **ARM** (or Apple Silicon)                                                                                |
 |:-----------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| **Windows** | [kyocera-printer-monitor-x86\_64-pc-windows-msvc.exe](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-x86_64-pc-windows-msvc.exe) |  [kyocera-printer-monitor-aarch64-windows-msvc.exe](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-aarch64-windows-msvc.exe)  |
-|  **MacOS**  |        [kyocera-printer-monitor-x86\_64-apple-darwin](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-x86_64-apple-darwin)        |      [kyocera-printer-monitor-aarch64-apple-darwin](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-aarch64-apple-darwin)      |
-|  **Linux**  |   [kyocera-printer-monitor-x86\_64-unknown-linux-gnu](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-x86_64-unknown-linux-gnu)   | [kyocera-printer-monitor-aarch64-unknown-linux-gnu](https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-aarch64-unknown-linux-gnu) |
+| **Windows** | [kyocera-printer-monitor-x86\_64-pc-windows-msvc.exe](https://github.com/machineonamission/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-x86_64-pc-windows-msvc.exe) |  [kyocera-printer-monitor-aarch64-windows-msvc.exe](https://github.com/machineonamission/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-aarch64-windows-msvc.exe)  |
+|  **MacOS**  |        [kyocera-printer-monitor-x86\_64-apple-darwin](https://github.com/machineonamission/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-x86_64-apple-darwin)        |      [kyocera-printer-monitor-aarch64-apple-darwin](https://github.com/machineonamission/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-aarch64-apple-darwin)      |
+|  **Linux**  |   [kyocera-printer-monitor-x86\_64-unknown-linux-gnu](https://github.com/machineonamission/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-x86_64-unknown-linux-gnu)   | [kyocera-printer-monitor-aarch64-unknown-linux-gnu](https://github.com/machineonamission/kyocera-printer-monitor/releases/latest/download/kyocera-printer-monitor-aarch64-unknown-linux-gnu) |
 
 ## 🚀 How to use
 

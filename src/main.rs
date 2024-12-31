@@ -37,7 +37,7 @@ async fn core() -> Result<()> {
     tokio::spawn(async move {
         if let Err(e) = update::check_for_updates().await {
             eprintln!("Error checking for updates: {e}\n\
-            You can see the latest version here: https://github.com/reticivis-net/kyocera-printer-monitor/releases/latest");
+            You can see the latest version here: https://github.com/machineonamission/kyocera-printer-monitor/releases/latest");
         }
     });
 
@@ -262,7 +262,7 @@ async fn main() {
     // the only errors that happen are clipboard errors but it gives me room in the future i suppose
     if let Err(e) = core().await {
         eprintln!("Unrecoverable error occurred: {:?}", e);
-        eprintln!("Please report this on the GitHub: https://github.com/reticivis-net/kyocera-printer-monitor/issues/new")
+        eprintln!("Please report this on the GitHub: https://github.com/machineonamission/kyocera-printer-monitor/issues/new")
     }
 
     println!("Press enter to exit program.");

@@ -5,8 +5,6 @@ use crate::json_utils::unwrap_json_string;
 
 pub async fn check_for_updates() -> Result<()> {
     let result = reqwest::Client::builder()
-        // MOST printers FORCE https but none have a valid cert so bleh
-        .danger_accept_invalid_certs(true)
         .user_agent("Kyocera Printer Monitor")
         .build()?
         .get("https://api.github.com/repos/machineonamission/kyocera-printer-monitor/releases/latest")

@@ -22,6 +22,20 @@ enum OutputMode {
     ListAll,
 }
 
+fn credits() {
+    println!(
+        "🖨️ Kyocera Printer Monitor v{} by Melody aka Machine on a Mission\n\
+        https://machineonamission.me/\n\
+        Source code and downloads: https://github.com/machineonamission/kyocera-printer-monitor",
+        env!("CARGO_PKG_VERSION")
+    );
+    println!("Press enter to continue.");
+    let mut s = String::new();
+    stdin()
+        .read_line(&mut s)
+        .expect("Did not enter a correct string");
+}
+
 async fn core() -> Result<()> {
     // for debugging
     // let async_runtime = Rc::new(Mutex::new(js::init()));
@@ -50,7 +64,8 @@ async fn core() -> Result<()> {
         1) Output in spreadsheet mode\n\
         2) List only the errors\n\
         3) List statuses of all printers\n\
-        4) Exit"
+        4) About\n\
+        5) Exit"
         );
         let mut s = String::new();
         sin.read_line(&mut s)
@@ -69,6 +84,9 @@ async fn core() -> Result<()> {
                 break;
             }
             "4" => {
+                credits();
+            }
+            "5" => {
                 return Ok(());
             }
             e => {

@@ -22,7 +22,7 @@ enum OutputMode {
     ListAll,
 }
 
-fn credits() {
+fn credits() -> Result<()> {
     println!(
         "🖨️ Kyocera Printer Monitor v{} by Melody aka Machine on a Mission\n\
         https://machineonamission.me/\n\
@@ -31,9 +31,8 @@ fn credits() {
     );
     println!("Press enter to continue.");
     let mut s = String::new();
-    stdin()
-        .read_line(&mut s)
-        .expect("Did not enter a correct string");
+    stdin().read_line(&mut s)?;
+    Ok(())
 }
 
 async fn core() -> Result<()> {
@@ -68,8 +67,7 @@ async fn core() -> Result<()> {
         5) Exit"
         );
         let mut s = String::new();
-        sin.read_line(&mut s)
-            .expect("Did not enter a correct string");
+        sin.read_line(&mut s)?;
         match s.trim() {
             "1" => {
                 outmode = OutputMode::Spreadsheet;
@@ -84,7 +82,7 @@ async fn core() -> Result<()> {
                 break;
             }
             "4" => {
-                credits();
+                credits()?;
             }
             "5" => {
                 return Ok(());
@@ -109,8 +107,7 @@ async fn core() -> Result<()> {
         );
         retrieved_from_file = false;
         let mut s = String::new();
-        sin.read_line(&mut s)
-            .expect("Did not enter a correct string");
+        sin.read_line(&mut s)?;
         match s.trim() {
             "1" => {
                 // reuse mode
@@ -140,8 +137,7 @@ async fn core() -> Result<()> {
                 // repeatedly loop over stdin until we get an empty line, so the user can input multiple lines
                 loop {
                     let mut s = String::new();
-                    sin.read_line(&mut s)
-                        .expect("Did not enter a correct string");
+                    sin.read_line(&mut s)?;
                     let trimmed = s.trim();
                     if trimmed.is_empty() {
                         break;

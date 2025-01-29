@@ -16,7 +16,7 @@ pub fn cursed_js_to_object(runtime: &mut JsEngine, script: String) -> Result<Obj
     ))?;
     // get the object from the JS runtime, -1 is the last one i guess?
     let obj = runtime.get_string(-1);
-    let val: Value = serde_json::from_str(&obj)?;
+    let val: Value = serde_json::from_str(obj)?;
     if let Value::Object(map) = val {
         Ok(map)
     } else {

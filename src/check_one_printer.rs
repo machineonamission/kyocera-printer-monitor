@@ -114,7 +114,7 @@ async fn check_paper(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status>
     let mut cassette_count =
         unwrap_json_number(&obj["getCassetCount"], "getCassetCount key")? as usize;
     // if the key does exist, regardless of if its 0 or 1, mptray is not included in the count and we bing chilling
-    if let None = obj.get("mpTrayStatus") {
+    if obj.get("mpTrayStatus").is_none() {
         cassette_count -= 1usize // if this key doesn't exist, mptray is included in the count, subtract
     }
 
@@ -139,6 +139,8 @@ async fn check_paper(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status>
                 0usize
             })
         };
+        // i know its <= 0 but i want it to be a constant that can be changed
+        #[allow(clippy::absurd_extreme_comparisons)]
         if levelint <= PAPER_THRESHOLD {
             let paper_size_raw =
                 unwrap_json_string(&sizes[cassette], format!("Cassette {cassette} PaperSize"))?;

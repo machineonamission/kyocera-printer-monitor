@@ -26,7 +26,8 @@ fn credits() -> Result<()> {
     println!(
         "🖨️ Kyocera Printer Monitor v{} by Melody aka Machine on a Mission\n\
         https://machineonamission.me/\n\
-        Source code and downloads: https://github.com/machineonamission/kyocera-printer-monitor",
+        Source code, downloads, bug reports, feature requests are on the GitHub:\n\
+        https://github.com/machineonamission/kyocera-printer-monitor",
         env!("CARGO_PKG_VERSION")
     );
     println!("Press enter to continue.");

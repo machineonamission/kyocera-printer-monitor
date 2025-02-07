@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use anyhow::Result;
@@ -7,6 +8,7 @@ use tokio::sync::Mutex;
 use tokio::try_join;
 
 use crate::http::fetch_object;
+use crate::js::Object;
 use crate::r#static::*;
 use crate::status::Status;
 use crate::{http, json_utils::*};
@@ -42,7 +44,7 @@ async fn check_toner(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status>
     // the printer has a "ColorOrMono" key but i'd rather just enumerate the array directly
     for (i, color) in toner_arr.iter().enumerate() {
         let level = unwrap_json_number(color, format!("Toner 'Renaming' key {i}"))?;
-        if level <= TONER_THRESHOLD || level == -1f64 {
+        if level == 0f64 || level == -1f64 {
             // the actual core logic wrapped by all this error handling
             let color_name = match TONER_KEYS.get(i) {
                 Some(color) => color.to_string(),
@@ -103,6 +105,24 @@ async fn check_status(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status
     Ok(status)
 }
 
+fn group_cassettes_by_type(obj: &Object, cassette_count: usize) -> Result<Vec<Vec<usize>>> {
+    // groups cassettes into arrays based on their paper size and type
+    let sizes = unwrap_json_array(&obj["PaperSize"], "PaperSize key")?;
+    let types = unwrap_json_array(&obj["PaperType"], "PaperType key")?;
+
+    let mut cassettes = HashMap::<[String; 2], Vec<usize>>::new();
+
+    for cassette in 0..cassette_count {
+        let size = unwrap_json_string(&sizes[cassette], format!("Cassette {cassette} PaperSize"))?;
+        let ctype = unwrap_json_string(&types[cassette], format!("Cassette {cassette} PaperSize"))?;
+        let key = [size.clone(), ctype.clone()];
+        cassettes.entry(key).or_default().push(cassette);
+    }
+    let out: Vec<Vec<usize>> = cassettes.values().cloned().collect();
+
+    Ok(out)
+}
+
 async fn check_paper(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status> {
     let obj = fetch_object(host, "js/jssrc/model/startwlm/Hme_Paper.model.htm", runtime).await?;
     let mut status = Status::Ready;
@@ -121,65 +141,127 @@ async fn check_paper(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status>
     // getPaperStatus returns if the printer can detect the exactish paper count vs just empty/full,
     // i dont think we need it cause getCassetLevel is just fixed at 100 or level_empty which is fine
 
+    let type_groups = group_cassettes_by_type(&obj, cassette_count)?;
+
     let levels = unwrap_json_array(&obj["getCassetLevel"], "getCassetLevel key")?;
     let sizes = unwrap_json_array(&obj["PaperSize"], "PaperSize key")?;
     let types = unwrap_json_array(&obj["PaperType"], "PaperType key")?;
     let capacities = unwrap_json_array(&obj["PaperCapacity"], "PaperCapacity key")?;
 
-    for cassette in 0..cassette_count {
-        let level = unwrap_json_string(&levels[cassette], format!("Cassette {cassette} level"))?;
-        // let level = "level_unknown"; // for debugging
-        let mut unknown = false;
-        let levelint = if "level_empty" == level {
-            0usize
-        } else {
-            // parse or else mark error
-            level.parse::<usize>().unwrap_or_else(|_| {
-                unknown = true;
+    for cassettes in type_groups {
+        // check if the entire group is empty
+        let mut group_is_empty = true;
+        for cassette in &cassettes {
+            let level =
+                unwrap_json_string(&levels[*cassette], format!("Cassette {cassette} level"))?;
+            // let level = "level_unknown"; // for debugging
+            let mut unknown = false;
+            let levelint = if "level_empty" == level {
                 0usize
-            })
-        };
-        // i know its <= 0 but i want it to be a constant that can be changed
-        #[allow(clippy::absurd_extreme_comparisons)]
-        if levelint <= PAPER_THRESHOLD {
-            let paper_size_raw =
-                unwrap_json_string(&sizes[cassette], format!("Cassette {cassette} PaperSize"))?;
+            } else {
+                // parse or else mark error
+                level.parse::<usize>().unwrap_or_else(|_| {
+                    unknown = true;
+                    0usize
+                })
+            };
+            if levelint != 0 {
+                group_is_empty = false;
+                break;
+            }
+        }
+        if group_is_empty {
+            // because we grouped them, we only need to query one cassette for the paper size and type
+            let paper_size_raw = unwrap_json_string(
+                &sizes[cassettes[0]],
+                format!("Cassette {} PaperSize", cassettes[0]),
+            )?;
             let paper_size = match PAPER_SIZES.get(paper_size_raw) {
                 None => {
                     format!("Unknown size {paper_size_raw}")
                 }
                 Some(s) => s.to_string(),
             };
-            let paper_type_raw =
-                unwrap_json_string(&types[cassette], format!("Cassette {cassette} PaperType"))?;
+            let paper_type_raw = unwrap_json_string(
+                &types[cassettes[0]],
+                format!("Cassette {} PaperType", cassettes[0]),
+            )?;
             let media_type = match MEDIA_TYPES.get(paper_type_raw) {
                 None => {
                     format!("Unknown media type {paper_size_raw}")
                 }
                 Some(s) => s.to_string(),
             };
-            let paper_capacity = unwrap_json_string(
-                &capacities[cassette],
-                format!("Cassette {cassette} PaperCapacity"),
-            )?;
-            let fullness_string = if unknown {
-                format!(
-                    "at {}. It may be empty or not installed",
-                    if level == "level_unknown" {
-                        "an unknown level"
-                    } else {
-                        level
-                    }
-                )
-            } else if levelint == 0 {
-                "empty".to_string()
-            } else {
-                format!("{levelint}% full")
-            };
-            status += Status::Error(format!(
-                "Cassette {} is {fullness_string}. It takes {media_type} {paper_size} paper with a capacity of {paper_capacity}.",
-                cassette + 1 // 0 indexed to 1 indexed
-            ), 1);
+
+            // theoretically 1 machine can have unknown cassettes and known empty cassettes
+            let mut known_cassettes = Vec::<usize>::new();
+            let mut known_capacity = 0usize;
+            let mut unknown_cassettes = Vec::<usize>::new();
+            let mut unknown_capacity = 0usize;
+            for cassette in &cassettes {
+                let level =
+                    unwrap_json_string(&levels[*cassette], format!("Cassette {cassette} level"))?;
+                // let level = "level_unknown"; // for debugging
+                let unknown = if "level_empty" == level {
+                    false
+                } else {
+                    // if valid, it's not unknown
+                    level.parse::<usize>().is_err()
+                };
+
+                let paper_capacity = unwrap_json_string(
+                    &capacities[*cassette],
+                    format!("Cassette {cassette} PaperCapacity"),
+                )?
+                .parse::<usize>()?;
+                if unknown {
+                    unknown_cassettes.push(*cassette);
+                    unknown_capacity += paper_capacity;
+                } else {
+                    known_cassettes.push(*cassette);
+                    known_capacity += paper_capacity;
+                }
+            }
+            // evil formatting fuckery
+            let mut status_message = Vec::<String>::new();
+            for (type_cassettes, capacity, level_type_singular, level_type_plural) in [
+                (known_cassettes, known_capacity, "is empty", "are empty"),
+                (
+                    unknown_cassettes,
+                    unknown_capacity,
+                    "is at an unknown level. It may be empty or not installed",
+                    "are at an unknown level. They may be empty or not installed",
+                ),
+            ] {
+                let cassettes_str = type_cassettes
+                    .iter()
+                    .map(|&num| (num + 1).to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                if !type_cassettes.is_empty() {
+                    status_message.push(
+                        if type_cassettes.len() == 1 {
+                            format!(
+                                "Cassette {cassettes_str} {level_type_singular}. It has a capacity of {capacity}.",
+                            )
+                        } else {
+                            format!(
+                                "Cassettes {cassettes_str} {level_type_plural}. They have a combined capacity of {capacity}.",
+                            )
+                        }
+                    );
+                }
+            }
+            status_message.push(format!(
+                "{} {media_type} {paper_size} paper.",
+                if cassettes.len() == 1 {
+                    "It takes"
+                } else {
+                    "They take"
+                }
+            ));
+
+            status += Status::Error(status_message.join(" "), 1);
         }
     }
     // dbg!(&obj);

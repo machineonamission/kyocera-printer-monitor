@@ -53,11 +53,11 @@ async fn check_toner(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status>
             // -1 seems to be an error state
             if level == -1f64 {
                 status += Status::Error(
-                    format!("{color_name} Toner is at an unknown level. It may be empty or not installed."),
+                    format!("{color_name} Toner is unknown (empty/not installed/error)."),
                     1,
                 );
             } else {
-                status += Status::Error(format!("{color_name} Toner is at {level}%"), 1);
+                status += Status::Error(format!("{color_name} Toner at {level}%"), 1);
             }
         }
     }
@@ -67,7 +67,7 @@ async fn check_toner(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status>
         2 => { /*status += Status::Ready // redundant add */ }
         i @ (0 | 1 | 3) => {
             status += Status::Error(
-                format!("Waste Toner status is {}", WASTE_TONER_STATUSES[i]),
+                format!("Waste Toner status: {}", WASTE_TONER_STATUSES[i]),
                 1,
             )
         }
@@ -88,18 +88,18 @@ async fn check_status(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status
     let pds = unwrap_json_string(&obj["PrinterDeviceStatus"], "PrinterDeviceStatus key")?;
     let pdsint = pds.parse::<usize>()?;
     if ERRORS.contains(&pdsint) {
-        status += Status::Error(format!("Printer status is: {}", STATUSES[pdsint]), 1);
+        status += Status::Error(format!("Printer status: {}", STATUSES[pdsint]), 1);
     }
 
     let sds = unwrap_json_string(&obj["ScannerDeviceStatus"], "ScannerDeviceStatus key")?;
     let sdsint = sds.parse::<usize>()?;
     if ERRORS.contains(&sdsint) {
-        status += Status::Error(format!("Scanner status is: {}", STATUSES[sdsint]), 1);
+        status += Status::Error(format!("Scanner status: {}", STATUSES[sdsint]), 1);
     }
 
     let pm = unwrap_json_string(&obj["PanelMessage"], "PanelMessage key")?;
     if let Status::Error(_, _) = status {
-        status += Status::Error(format!("Panel message is: {pm}"), 0); // 0 cause this only activates if either 2 are true errors
+        status += Status::Error(format!("Panel message: {pm}"), 0); // 0 cause this only activates if either 2 are true errors
     }
 
     Ok(status)
@@ -121,6 +121,14 @@ fn group_cassettes_by_type(obj: &Object, cassette_count: usize) -> Result<Vec<Ve
     let out: Vec<Vec<usize>> = cassettes.values().cloned().collect();
 
     Ok(out)
+}
+
+fn comma_separate_numbers(numbers: &Vec<usize>) -> String {
+    numbers
+        .iter()
+        .map(|&num| (num + 1).to_string())
+        .collect::<Vec<String>>()
+        .join(", ")
 }
 
 async fn check_paper(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status> {
@@ -229,37 +237,25 @@ async fn check_paper(host: &str, runtime: Rc<Mutex<JsEngine>>) -> Result<Status>
                 (
                     unknown_cassettes,
                     unknown_capacity,
-                    "is at an unknown level. It may be empty or not installed",
-                    "are at an unknown level. They may be empty or not installed",
+                    "is unknown (empty/not installed/error)",
+                    "are unknown (empty/not installed/error)",
                 ),
             ] {
-                let cassettes_str = type_cassettes
-                    .iter()
-                    .map(|&num| (num + 1).to_string())
-                    .collect::<Vec<String>>()
-                    .join(", ");
+                let cassettes_str = comma_separate_numbers(&type_cassettes);
                 if !type_cassettes.is_empty() {
                     status_message.push(
                         if type_cassettes.len() == 1 {
                             format!(
-                                "Cassette {cassettes_str} {level_type_singular}. It has a capacity of {capacity}.",
+                                "Cassette {cassettes_str} {level_type_singular} (capacity of {capacity} {media_type} {paper_size} paper).",
                             )
                         } else {
                             format!(
-                                "Cassettes {cassettes_str} {level_type_plural}. They have a combined capacity of {capacity}.",
+                                "Cassettes {cassettes_str} {level_type_plural} (combined capacity of {capacity} {media_type} {paper_size} paper).",
                             )
                         }
                     );
                 }
             }
-            status_message.push(format!(
-                "{} {media_type} {paper_size} paper.",
-                if cassettes.len() == 1 {
-                    "It takes"
-                } else {
-                    "They take"
-                }
-            ));
 
             status += Status::Error(status_message.join(" "), 1);
         }

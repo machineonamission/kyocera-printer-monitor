@@ -1,7 +1,7 @@
-use std::rc::Rc;
-
 use anyhow::{anyhow, Result};
 use kg_js::JsEngine;
+use std::rc::Rc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 
 use crate::js;
@@ -15,6 +15,7 @@ pub async fn fetch(host: &str, path: &str) -> Result<String> {
         // without these 2 headers the request errors "internal server error" for some reason
         .header(reqwest::header::COOKIE, "rtl=0")
         .header(reqwest::header::REFERER, host)
+        .timeout(Duration::from_secs(5))
         .send()
         .await?
         .text()
@@ -31,6 +32,7 @@ pub async fn get_right_host(ip: &str) -> Result<String> {
         .redirect(reqwest::redirect::Policy::none())
         .build()?
         .get(format!("http://{ip}"))
+        .timeout(Duration::from_secs(5))
         .send()
         .await?;
     match resp.status().as_u16() {
